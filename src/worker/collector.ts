@@ -7,8 +7,8 @@ import { decrypt } from '../lib/encryption.js'
 import type { CollectJobData, TransferJobData } from './queues.js'
 import type { Network, Transaction, Treasury } from '../payload-types.js'
 
-const MIN_BATCH_SIZE = 5
-const MAX_BATCH_SIZE = 20
+const MIN_BATCH_SIZE = Number(process.env.MIN_BATCH_SIZE) || 5
+const MAX_BATCH_SIZE = Number(process.env.MAX_BATCH_SIZE) || 20
 
 /**
  * Collector worker: runs every 5 minutes via a repeatable job.

@@ -3,7 +3,7 @@ import { collectQueue } from './queues.js'
 import { startCollectorWorker } from './collector.js'
 import { startTransferWorker } from './processor.js'
 
-const COLLECT_INTERVAL_MS = 1 * 60 * 1000 // 1 minutes
+const COLLECT_INTERVAL_MS = Number(process.env.INTERVAL_COLLECT_MINS || 5) * 60 * 1000 // 1 minutes
 const TRANSFER_CONCURRENCY = Number(process.env.TRANSFER_CONCURRENCY) || 5
 const REDIS_TARGET =
   process.env.REDIS_URL ||
