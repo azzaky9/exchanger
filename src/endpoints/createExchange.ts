@@ -4,16 +4,19 @@ import { APIError } from 'payload'
 /**
  * POST /api/transactions/create-exchange
  *
- * Creates a fiat-to-crypto exchange transaction.
- * Auto-selects a treasury wallet for the chosen network,
- * auto-calculates exchange rate and fees via the beforeValidate hook.
+ * Creates an exchange transaction (fiat-to-crypto or crypto-to-fiat).
+ * Auto-selects a treasury wallet for the chosen network.
+ *
+ * Exchange rate and markup are set later by admin in the panel.
+ * amountPhp is auto-computed from amountUsdt × exchangeRate × (1 + markup%).
  *
  * Body:
- *   - amountPhp: number (required)
+ *   - type: 'fiat_to_crypto' | 'crypto_to_fiat' (required)
+ *   - amountUsdt: number (required — USDT amount)
  *   - network: number (network ID, required)
  *   - targetAddress: string (destination wallet, required)
  *
- * Returns the created transaction with all calculated fields.
+ * Returns the created transaction.
  */
 export const createExchangeEndpoint: Endpoint = {
   path: '/create-exchange',
@@ -26,15 +29,21 @@ export const createExchangeEndpoint: Endpoint = {
     const body =
       typeof req.json === 'function' ? await req.json() : (req as unknown as { body: unknown }).body
 
-    const { amountPhp, network, targetAddress } = body as {
-      amountPhp?: number
+    const { type, amountUsdt, network, targetAddress } = body as {
+      type?: string
+      amountUsdt?: number
       network?: number
       targetAddress?: string
     }
 
+    const validTypes = ['fiat_to_crypto', 'crypto_to_fiat'] as const
+    if (!type || !validTypes.includes(type as (typeof validTypes)[number])) {
+      throw new APIError("type is required and must be 'fiat_to_crypto' or 'crypto_to_fiat'", 400)
+    }
+
     // Validate required fields
-    if (!amountPhp || typeof amountPhp !== 'number' || amountPhp <= 0) {
-      throw new APIError('amountPhp is required and must be a positive number', 400)
+    if (!amountUsdt || typeof amountUsdt !== 'number' || amountUsdt <= 0) {
+      throw new APIError('amountUsdt is required and must be a positive number', 400)
     }
     if (!network || typeof network !== 'number') {
       throw new APIError('network is required (network ID)', 400)
@@ -71,13 +80,12 @@ export const createExchangeEndpoint: Endpoint = {
 
     const treasury = treasuries[0]
 
-    // Create the transaction — the beforeValidate hook will auto-calculate
-    // exchangeRate, amountUsdt, fees, and netAmountUsdt from amountPhp
+    // Create the transaction — exchange rate and markup are set by admin later
     const transaction = await payload.create({
       collection: 'transactions',
       data: {
-        type: 'fiat_to_crypto',
-        amountPhp,
+        type: type as (typeof validTypes)[number],
+        amountUsdt,
         network,
         targetAddress: targetAddress.trim(),
         treasury: treasury.id,
@@ -90,12 +98,7 @@ export const createExchangeEndpoint: Endpoint = {
       transaction: {
         id: transaction.id,
         type: transaction.type,
-        amountPhp: transaction.amountPhp,
-        exchangeRate: transaction.exchangeRate,
         amountUsdt: transaction.amountUsdt,
-        exchangeFeePercent: transaction.exchangeFeePercent,
-        exchangeFeeUsdt: transaction.exchangeFeeUsdt,
-        netAmountUsdt: transaction.netAmountUsdt,
         network: transaction.network,
         targetAddress: transaction.targetAddress,
         status: transaction.status,

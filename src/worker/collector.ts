@@ -51,8 +51,6 @@ export function startCollectorWorker() {
 
       // Aggregate batch totals across all transactions (multi-network)
       const totalUsdt = toProcess.reduce((sum, tx) => sum + (tx.amountUsdt ?? 0), 0)
-      const totalFee = toProcess.reduce((sum, tx) => sum + (tx.exchangeFeeUsdt ?? 0), 0)
-      const totalNet = toProcess.reduce((sum, tx) => sum + (tx.netAmountUsdt ?? 0), 0)
 
       // Create a single batch for all transactions
       const batch = await payload.create({
@@ -60,8 +58,8 @@ export function startCollectorWorker() {
         data: {
           transactionCount: toProcess.length,
           totalUsdtBatched: totalUsdt,
-          totalFeeUsdt: totalFee,
-          totalNetUsdt: totalNet,
+          totalFeeUsdt: 0,
+          totalNetUsdt: totalUsdt,
           status: 'processing',
         },
       })
@@ -165,7 +163,7 @@ export function startCollectorWorker() {
             networkSymbol: network.symbol,
             networkRpcUrl: network.rpcUrl,
             targetAddress: tx.targetAddress,
-            amountUsdt: tx.netAmountUsdt ?? tx.amountUsdt ?? 0,
+            amountUsdt: tx.amountUsdt ?? 0,
             treasuryWalletAddress: treasury.walletAddress,
             usdtContractAddress: network.usdtContractAddress,
             usdtDecimals: network.usdtDecimals ?? 6,
@@ -190,7 +188,7 @@ export function startCollectorWorker() {
 
       console.log(
         `[Collector] Batch ${batch.id}: ${toProcess.length} txns [${summaryStr}] | ` +
-          `Gross: ${totalUsdt} USDT | Fees: ${totalFee} USDT | Net: ${totalNet} USDT`,
+          `Total: ${totalUsdt} USDT`,
       )
 
       console.log(`[Collector] Job done. Enqueued ${transferJobs.length} transfer jobs.`)

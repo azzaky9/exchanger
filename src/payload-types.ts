@@ -248,52 +248,48 @@ export interface Transaction {
    * Direction of the exchange
    */
   type: 'fiat_to_crypto' | 'crypto_to_fiat';
+  status: 'awaiting_fiat' | 'fiat_received' | 'crypto_transfer_pending' | 'completed' | 'refunded' | 'review_needed';
   /**
    * Source treasury wallet for the transfer
    */
   treasury: number | Treasury;
-  /**
-   * Nullable initially, assigned when batched
-   */
-  batch?: (number | null) | Batch;
-  /**
-   * Incoming PHP amount
-   */
-  amountPhp: number;
-  /**
-   * Auto-fetched from ExchangeRate API (PHP to USD/USDT)
-   */
-  exchangeRate?: number | null;
-  /**
-   * Gross USDT before company fee
-   */
-  amountUsdt?: number | null;
-  /**
-   * Company exchange fee percentage
-   */
-  exchangeFeePercent?: number | null;
-  /**
-   * Fee amount deducted in USDT
-   */
-  exchangeFeeUsdt?: number | null;
-  /**
-   * Amount sent to user after fee deduction
-   */
-  netAmountUsdt?: number | null;
-  /**
-   * Transfer fee amount
-   */
-  gasFee?: number | null;
   network: number | Network;
+  /**
+   * Amount of USDT requested
+   */
+  amountUsdt: number;
   /**
    * Destination wallet address for the transfer
    */
   targetAddress: string;
   /**
+   * PHP per 1 USDT — set by admin
+   */
+  exchangeRate?: number | null;
+  /**
+   * Fixed fee added on top of base PHP amount
+   */
+  markup?: number | null;
+  /**
+   * Auto-computed: (amountUsdt × exchangeRate) + markup
+   */
+  amountPhp?: number | null;
+  /**
+   * Markup fee collected as profit
+   */
+  profit?: number | null;
+  /**
+   * Transfer fee amount
+   */
+  gasFee?: number | null;
+  /**
    * On-chain transaction hash after transfer
    */
   txHash?: string | null;
-  status: 'awaiting_fiat' | 'fiat_received' | 'crypto_transfer_pending' | 'completed' | 'refunded' | 'review_needed';
+  /**
+   * Nullable initially, assigned when batched
+   */
+  batch?: (number | null) | Batch;
   /**
    * Reason for failure or review flag
    */
@@ -511,19 +507,18 @@ export interface TreasurySelect<T extends boolean = true> {
  */
 export interface TransactionsSelect<T extends boolean = true> {
   type?: T;
-  treasury?: T;
-  batch?: T;
-  amountPhp?: T;
-  exchangeRate?: T;
-  amountUsdt?: T;
-  exchangeFeePercent?: T;
-  exchangeFeeUsdt?: T;
-  netAmountUsdt?: T;
-  gasFee?: T;
-  network?: T;
-  targetAddress?: T;
-  txHash?: T;
   status?: T;
+  treasury?: T;
+  network?: T;
+  amountUsdt?: T;
+  targetAddress?: T;
+  exchangeRate?: T;
+  markup?: T;
+  amountPhp?: T;
+  profit?: T;
+  gasFee?: T;
+  txHash?: T;
+  batch?: T;
   failReason?: T;
   fiatSettlementId?: T;
   updatedAt?: T;

@@ -139,7 +139,7 @@ export const retryBatchEndpoint: Endpoint = {
           networkSymbol: network.symbol,
           networkRpcUrl: network.rpcUrl,
           targetAddress: tx.targetAddress,
-          amountUsdt: tx.netAmountUsdt ?? tx.amountUsdt ?? 0,
+          amountUsdt: tx.amountUsdt ?? 0,
           treasuryWalletAddress: treasury.walletAddress,
           usdtContractAddress: network.usdtContractAddress,
           usdtDecimals: network.usdtDecimals ?? 6,

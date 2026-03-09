@@ -1,14 +1,13 @@
 import type { CollectionConfig } from 'payload'
-import { convertPhpToUsdt } from '../lib/exchangeRate'
 import { createExchangeEndpoint } from '../endpoints/createExchange'
-import { fiatSettlementWebhookEndpoint } from '../endpoints/fiatSettlementWebhook'
+import { checkSettlementEndpoint } from '../endpoints/checkSettlement'
 
 export const Transaction: CollectionConfig = {
   slug: 'transactions',
-  endpoints: [createExchangeEndpoint, fiatSettlementWebhookEndpoint],
+  endpoints: [createExchangeEndpoint, checkSettlementEndpoint],
   admin: {
     useAsTitle: 'id',
-    defaultColumns: ['amountPhp', 'amountUsdt', 'network', 'status', 'createdAt'],
+    defaultColumns: ['amountUsdt', 'network', 'status', 'createdAt'],
     group: 'Operations',
   },
   access: {
@@ -18,131 +17,140 @@ export const Transaction: CollectionConfig = {
     delete: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
   },
   hooks: {
-    beforeValidate: [
-      async ({ data, operation }) => {
-        if (!data?.amountPhp) return data
+    beforeChange: [
+      async ({ data }) => {
+        if (!data) return data
 
-        const shouldCalculate =
-          operation === 'create' || (operation === 'update' && data.amountPhp && !data.exchangeRate)
+        const amountUsdt = data.amountUsdt
+        const exchangeRate = data.exchangeRate
+        const markup = data.markup ?? 0
 
-        if (!shouldCalculate) return data
-
-        try {
-          const conversion = await convertPhpToUsdt(data.amountPhp)
-
-          console.log(
-            `[Exchange] Converted ${data.amountPhp} PHP → ${conversion.amountUsdt} USDT (fee: ${conversion.feePercent}%, net: ${conversion.netAmountUsdt} USDT)`,
-          )
-
-          return {
-            ...data,
-            exchangeRate: conversion.rate,
-            amountUsdt: conversion.amountUsdt,
-            exchangeFeePercent: conversion.feePercent,
-            exchangeFeeUsdt: conversion.feeUsdt,
-            netAmountUsdt: conversion.netAmountUsdt,
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          console.error(`[Exchange] Failed to fetch rate: ${message}`)
-          throw new Error(`Failed to fetch exchange rate: ${message}`)
+        // Compute amountPhp and profit when admin has filled in rate
+        if (amountUsdt && exchangeRate && exchangeRate > 0) {
+          const basePhp = Math.round(amountUsdt * exchangeRate * 100) / 100
+          data.amountPhp = Math.round((basePhp + markup) * 100) / 100
+          data.profit = Math.round(markup * 100) / 100
         }
+
+        return data
       },
     ],
   },
   fields: [
     {
-      name: 'type',
-      type: 'select',
-      required: true,
-      defaultValue: 'fiat_to_crypto',
-      label: 'Transaction Type',
-      options: [
-        { label: 'Fiat to Crypto', value: 'fiat_to_crypto' },
-        { label: 'Crypto to Fiat', value: 'crypto_to_fiat' },
+      type: 'row',
+      fields: [
+        {
+          name: 'type',
+          type: 'select',
+          required: true,
+          defaultValue: 'fiat_to_crypto',
+          label: 'Transaction Type',
+          options: [
+            { label: 'Fiat to Crypto', value: 'fiat_to_crypto' },
+            { label: 'Crypto to Fiat', value: 'crypto_to_fiat' },
+          ],
+          admin: {
+            description: 'Direction of the exchange',
+            width: '50%',
+          },
+        },
+        {
+          name: 'status',
+          type: 'select',
+          required: true,
+          defaultValue: 'awaiting_fiat',
+          options: [
+            { label: 'Awaiting Fiat', value: 'awaiting_fiat' },
+            { label: 'Fiat Received', value: 'fiat_received' },
+            { label: 'Crypto Transfer Pending', value: 'crypto_transfer_pending' },
+            { label: 'Completed', value: 'completed' },
+            { label: 'Refunded', value: 'refunded' },
+            { label: 'Review Needed', value: 'review_needed' },
+          ],
+          admin: {
+            width: '50%',
+          },
+        },
       ],
-      admin: {
-        description: 'Direction of the exchange',
-      },
     },
     {
-      name: 'treasury',
-      type: 'relationship',
-      relationTo: 'treasury',
-      required: true,
-      label: 'Treasury Wallet',
-      admin: {
-        description: 'Source treasury wallet for the transfer',
-      },
+      type: 'row',
+      fields: [
+        {
+          name: 'treasury',
+          type: 'relationship',
+          relationTo: 'treasury',
+          required: true,
+          label: 'Treasury Wallet',
+          admin: {
+            description: 'Source treasury wallet for the transfer',
+            width: '50%',
+          },
+        },
+        {
+          name: 'network',
+          type: 'relationship',
+          relationTo: 'networks',
+          required: true,
+          label: 'Network',
+          admin: {
+            width: '50%',
+          },
+        },
+      ],
     },
     {
-      name: 'batch',
-      type: 'relationship',
-      relationTo: 'batches',
-      label: 'Batch',
-      admin: {
-        description: 'Nullable initially, assigned when batched',
-      },
+      type: 'row',
+      fields: [
+        {
+          name: 'amountUsdt',
+          type: 'number',
+          required: true,
+          label: 'Amount (USDT)',
+          admin: {
+            step: 0.000001,
+            description: 'Amount of USDT requested',
+            width: '50%',
+          },
+        },
+        {
+          name: 'targetAddress',
+          type: 'text',
+          required: true,
+          label: 'Target Address',
+          admin: {
+            description: 'Destination wallet address for the transfer',
+            width: '50%',
+          },
+        },
+      ],
     },
     {
-      name: 'amountPhp',
-      type: 'number',
-      required: true,
-      label: 'Amount (PHP)',
-      admin: {
-        step: 0.01,
-        description: 'Incoming PHP amount',
-      },
-    },
-    {
-      name: 'exchangeRate',
-      type: 'number',
-      label: 'Exchange Rate',
-      admin: {
-        step: 0.000001,
-        description: 'Auto-fetched from ExchangeRate API (PHP to USD/USDT)',
-        readOnly: true,
-      },
-    },
-    {
-      name: 'amountUsdt',
-      type: 'number',
-      label: 'Amount (USDT)',
-      admin: {
-        step: 0.000001,
-        description: 'Gross USDT before company fee',
-        readOnly: true,
-      },
-    },
-    {
-      name: 'exchangeFeePercent',
-      type: 'number',
-      label: 'Exchange Fee (%)',
-      admin: {
-        step: 0.01,
-        description: 'Company exchange fee percentage',
-        readOnly: true,
-      },
-    },
-    {
-      name: 'exchangeFeeUsdt',
-      type: 'number',
-      label: 'Exchange Fee (USDT)',
-      admin: {
-        step: 0.000001,
-        description: 'Fee amount deducted in USDT',
-        readOnly: true,
-      },
-    },
-    {
-      name: 'netAmountUsdt',
-      type: 'number',
-      label: 'Net Amount (USDT)',
-      admin: {
-        step: 0.000001,
-        description: 'Amount sent to user after fee deduction',
-        readOnly: true,
-      },
+      type: 'row',
+      fields: [
+        {
+          name: 'exchangeRate',
+          type: 'number',
+          label: 'Exchange Rate (PHP per USDT)',
+          admin: {
+            step: 0.000001,
+            description: 'PHP per 1 USDT — set by admin',
+            width: '50%',
+          },
+        },
+        {
+          name: 'markup',
+          type: 'number',
+          label: 'Markup (Fixed Amount)',
+          defaultValue: 0,
+          admin: {
+            step: 0.01,
+            description: 'Fixed fee added on top of base PHP amount',
+            width: '50%',
+          },
+        },
+      ],
     },
     {
       name: 'exchangeRateCalculator',
@@ -154,52 +162,66 @@ export const Transaction: CollectionConfig = {
       },
     },
     {
-      name: 'gasFee',
-      type: 'number',
-      label: 'Gas Fee',
-      admin: {
-        step: 0.000001,
-        description: 'Transfer fee amount',
-      },
-    },
-    {
-      name: 'network',
-      type: 'relationship',
-      relationTo: 'networks',
-      required: true,
-      label: 'Network',
-    },
-    {
-      name: 'targetAddress',
-      type: 'text',
-      required: true,
-      label: 'Target Address',
-      admin: {
-        description: 'Destination wallet address for the transfer',
-      },
-    },
-    {
-      name: 'txHash',
-      type: 'text',
-      label: 'Transaction Hash',
-      index: true,
-      admin: {
-        description: 'On-chain transaction hash after transfer',
-      },
-    },
-    {
-      name: 'status',
-      type: 'select',
-      required: true,
-      defaultValue: 'awaiting_fiat',
-      options: [
-        { label: 'Awaiting Fiat', value: 'awaiting_fiat' },
-        { label: 'Fiat Received', value: 'fiat_received' },
-        { label: 'Crypto Transfer Pending', value: 'crypto_transfer_pending' },
-        { label: 'Completed', value: 'completed' },
-        { label: 'Refunded', value: 'refunded' },
-        { label: 'Review Needed', value: 'review_needed' },
+      type: 'row',
+      fields: [
+        {
+          name: 'amountPhp',
+          type: 'number',
+          label: 'Amount (PHP)',
+          admin: {
+            step: 0.01,
+            description: 'Auto-computed: (amountUsdt × exchangeRate) + markup',
+            readOnly: true,
+            width: '50%',
+          },
+        },
+        {
+          name: 'profit',
+          type: 'number',
+          label: 'Profit',
+          defaultValue: 0,
+          admin: {
+            step: 0.01,
+            description: 'Markup fee collected as profit',
+            readOnly: true,
+            width: '50%',
+          },
+        },
       ],
+    },
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'gasFee',
+          type: 'number',
+          label: 'Gas Fee',
+          admin: {
+            step: 0.000001,
+            description: 'Transfer fee amount',
+            width: '50%',
+          },
+        },
+        {
+          name: 'txHash',
+          type: 'text',
+          label: 'Transaction Hash',
+          index: true,
+          admin: {
+            description: 'On-chain transaction hash after transfer',
+            width: '50%',
+          },
+        },
+      ],
+    },
+    {
+      name: 'batch',
+      type: 'relationship',
+      relationTo: 'batches',
+      label: 'Batch',
+      admin: {
+        description: 'Nullable initially, assigned when batched',
+      },
     },
     {
       name: 'failReason',

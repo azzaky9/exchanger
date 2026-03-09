@@ -1,13 +1,6 @@
----
-layout: default
-title: Exchanger Lotto API Docs
-description: A fiat-to-crypto exchange platform built with Payload CMS and Next.js.
-theme: jekyll-theme-merlot
----
-
 # Exchanger Lotto
 
-A fiat-to-crypto exchange platform built with Payload CMS and Next.js. Users submit PHP amounts, the system auto-calculates USDT conversion with fees, and processes on-chain transfers via configurable blockchain networks.
+A fiat-to-crypto and crypto-to-fiat exchange platform built with Payload CMS and Next.js. Users submit the USDT amount they need, an admin sets the exchange rate and markup, and the system processes on-chain transfers via configurable blockchain networks.
 
 ---
 
@@ -17,7 +10,7 @@ Base URL: `https://exc-api-stag.spinzo.io`
 
 ### Authentication
 
-All API endpoints (except the fiat settlement webhook) require authentication. Two methods are supported:
+All API endpoints require authentication. Two methods are supported:
 
 #### Option 1: API Key (Recommended for server-to-server)
 
@@ -37,7 +30,7 @@ Authorization: users API-Key s3cret
 
 ```bash
 curl -H "Authorization: users API-Key xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
-  https://your-domain.com/api/networks/available
+  https://exc-api-stag.spinzo.io/api/networks/available
 ```
 
 #### Option 2: JWT Token (For session-based apps)
@@ -108,7 +101,7 @@ Authorization: users API-Key YOUR_API_KEY
 
 ### 2. Create Exchange Transaction
 
-Submit a fiat-to-crypto exchange request. The system auto-calculates the exchange rate, fees, and net USDT. A treasury wallet is automatically assigned based on the chosen network.
+Submit an exchange request (fiat-to-crypto or crypto-to-fiat). The user specifies the USDT amount they need. A treasury wallet is automatically assigned based on the chosen network. The exchange rate and markup are set later by an admin in the panel, and the PHP amount is auto-computed.
 
 ```
 POST /api/transactions/create-exchange
@@ -118,17 +111,19 @@ Authorization: users API-Key YOUR_API_KEY
 
 **Request Body:**
 
-| Field           | Type   | Required | Description                           |
-| --------------- | ------ | -------- | ------------------------------------- |
-| `amountPhp`     | number | Yes      | Amount in Philippine Peso             |
-| `network`       | number | Yes      | Network ID (from the available list)  |
-| `targetAddress` | string | Yes      | User's wallet address to receive USDT |
+| Field           | Type   | Required | Description                                                  |
+| --------------- | ------ | -------- | ------------------------------------------------------------ |
+| `type`          | string | Yes      | `fiat_to_crypto` or `crypto_to_fiat`                         |
+| `amountUsdt`    | number | Yes      | Amount of USDT                                               |
+| `network`       | number | Yes      | Network ID (from the available list)                         |
+| `targetAddress` | string | Yes      | Destination wallet address to receive USDT                   |
 
 **Example Request:**
 
 ```json
 {
-  "amountPhp": 5000,
+  "type": "fiat_to_crypto",
+  "amountUsdt": 100,
   "network": 1,
   "targetAddress": "0x1234567890abcdef1234567890abcdef12345678"
 }
@@ -142,12 +137,7 @@ Authorization: users API-Key YOUR_API_KEY
   "transaction": {
     "id": 42,
     "type": "fiat_to_crypto",
-    "amountPhp": 5000,
-    "exchangeRate": 0.017543,
-    "amountUsdt": 87.72,
-    "exchangeFeePercent": 2,
-    "exchangeFeeUsdt": 1.75,
-    "netAmountUsdt": 85.97,
+    "amountUsdt": 100,
     "network": 1,
     "targetAddress": "0x1234567890abcdef1234567890abcdef12345678",
     "status": "awaiting_fiat",
@@ -156,89 +146,93 @@ Authorization: users API-Key YOUR_API_KEY
 }
 ```
 
+> **Note:** `exchangeRate`, `markup`, and `amountPhp` are not returned on creation. An admin sets the exchange rate and markup from the admin panel after the transaction is created. The PHP amount is then auto-computed as: `amountUsdt × exchangeRate × (1 + markup%)`.
+
 **Error Responses:**
 
 | Status | Reason                                          |
 | ------ | ----------------------------------------------- |
 | 401    | Unauthorized — missing or invalid credentials  |
+| 400    | Invalid `type` — must be `fiat_to_crypto` or `crypto_to_fiat` |
 | 400    | Missing/invalid fields, inactive network        |
 | 400    | No treasury wallet available for chosen network |
-| 500    | Exchange rate API failure                        |
 
-### 3. Fiat Settlement Webhook
+### 3. Check Settlement Status
 
-After the user completes the fiat payment through your payment gateway, call this webhook to notify the exchanger that fiat has been received. The transaction status will be updated to `fiat_received`, which queues it for automatic crypto transfer.
+Allows a third-party vault to check whether fiat has been settled for a given transaction. Fiat settlement is confirmed manually by an admin in the admin panel — this endpoint lets external systems poll the current status.
 
 ```
-POST /api/transactions/webhook/fiat-settlement
-Content-Type: application/json
-x-webhook-signature: sha256=<HMAC-SHA256 hex digest>
+GET /api/transactions/check-settlement/:id
+Authorization: users API-Key YOUR_API_KEY
 ```
 
-**Request Body:**
+**Path Parameters:**
 
-| Field              | Type   | Required | Description                        |
-| ------------------ | ------ | -------- | ---------------------------------- |
-| `transactionId`    | number | Yes      | Transaction ID from step 2         |
-| `fiatSettlementId` | string | Yes      | Your payment reference / ID        |
+| Parameter | Type   | Description              |
+| --------- | ------ | ------------------------ |
+| `id`      | number | Transaction ID to check  |
 
 **Example Request:**
 
-```json
-{
-  "transactionId": 42,
-  "fiatSettlementId": "PAY-20260307-ABC123"
-}
+```bash
+curl -H "Authorization: users API-Key YOUR_API_KEY" \
+  https://exc-api-stag.spinzo.io/api/transactions/check-settlement/42
 ```
 
-**Response:**
+**Response (fiat not yet settled):**
 
 ```json
 {
   "success": true,
   "transaction": {
     "id": 42,
-    "status": "fiat_received",
-    "fiatSettlementId": "PAY-20260307-ABC123"
+    "type": "fiat_to_crypto",
+    "amountUsdt": 100,
+    "status": "awaiting_fiat",
+    "fiatSettled": false,
+    "fiatSettlementId": null,
+    "txHash": null,
+    "createdAt": "2026-03-07T12:00:00.000Z",
+    "updatedAt": "2026-03-07T12:00:00.000Z"
   }
 }
 ```
 
+**Response (fiat settled, crypto completed):**
+
+```json
+{
+  "success": true,
+  "transaction": {
+    "id": 42,
+    "type": "fiat_to_crypto",
+    "amountUsdt": 100,
+    "status": "completed",
+    "fiatSettled": true,
+    "fiatSettlementId": "PAY-20260307-ABC123",
+    "txHash": "0xabc123...",
+    "createdAt": "2026-03-07T12:00:00.000Z",
+    "updatedAt": "2026-03-07T14:30:00.000Z"
+  }
+}
+```
+
+**Response Fields:**
+
+| Field              | Type    | Description                                                    |
+| ------------------ | ------- | -------------------------------------------------------------- |
+| `fiatSettled`      | boolean | `true` once admin has confirmed fiat receipt                   |
+| `fiatSettlementId` | string  | Admin-provided payment reference (null if not yet settled)     |
+| `txHash`           | string  | On-chain transaction hash (null if transfer not yet completed) |
+| `status`           | string  | Current transaction status (see lifecycle below)               |
+
 **Error Responses:**
 
-| Status | Reason                                          |
-| ------ | ----------------------------------------------- |
-| 400    | Missing/invalid fields                          |
-| 401    | Missing or invalid `x-webhook-signature` header |
-| 404    | Transaction not found                           |
-| 409    | Transaction is not in `awaiting_fiat` status    |
-| 500    | `WEBHOOK_SECRET` not configured on server       |
-
-#### Webhook Signature
-
-All webhook requests must be signed with HMAC-SHA256 using the shared `WEBHOOK_SECRET`. The signature is sent in the `x-webhook-signature` header.
-
-**How to sign (Node.js example):**
-
-```js
-const crypto = require('crypto');
-
-const body = JSON.stringify({ transactionId: 42, fiatSettlementId: 'PAY-20260307-ABC123' });
-const signature = 'sha256=' + crypto.createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex');
-
-// Send with header: x-webhook-signature: <signature>
-```
-
-**How to sign (Python example):**
-
-```python
-import hmac, hashlib, json
-
-body = json.dumps({"transactionId": 42, "fiatSettlementId": "PAY-20260307-ABC123"})
-signature = "sha256=" + hmac.new(WEBHOOK_SECRET.encode(), body.encode(), hashlib.sha256).hexdigest()
-
-# Send with header: x-webhook-signature: <signature>
-```
+| Status | Reason                                        |
+| ------ | --------------------------------------------- |
+| 401    | Unauthorized — missing or invalid credentials |
+| 400    | Missing or invalid transaction ID             |
+| 404    | Transaction not found                         |
 
 ### Transaction Lifecycle
 
@@ -247,8 +241,8 @@ awaiting_fiat → fiat_received → crypto_transfer_pending → completed
                                                         ↘ review_needed (on failure → retryable from admin)
 ```
 
-1. **`awaiting_fiat`** — Transaction created, waiting for fiat payment
-2. **`fiat_received`** — Fiat settlement confirmed via webhook; transaction is queued for batching
+1. **`awaiting_fiat`** — Transaction created, waiting for admin to confirm fiat payment
+2. **`fiat_received`** — Fiat settlement confirmed by admin in the panel; transaction is queued for batching
 3. **`crypto_transfer_pending`** — Batch collector picked up the transaction; on-chain transfer in progress
 4. **`completed`** — USDT successfully transferred to user's wallet
 5. **`review_needed`** — Transfer failed; admin can retry from the Payload admin panel
