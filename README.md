@@ -13,7 +13,7 @@ A fiat-to-crypto exchange platform built with Payload CMS and Next.js. Users sub
 
 ## API Integration Guide
 
-Base URL: `https://your-domain.com`
+Base URL: `https://exc-api-stag.spinzo.io`
 
 ### Authentication
 
@@ -24,7 +24,7 @@ All API endpoints (except the fiat settlement webhook) require authentication. T
 Each user account can have an API key generated from the admin panel. Send it in the `Authorization` header:
 
 ```
-Authorization: users API-Key YOUR_API_KEY_HERE
+Authorization: users API-Key s3cret
 ```
 
 **How to get an API key:**
