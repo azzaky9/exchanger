@@ -5,6 +5,7 @@ import * as migration_20260306_171733_add_exchange_fee_fields from './20260306_1
 import * as migration_20260306_175925_batch_monitoring from './20260306_175925_batch_monitoring';
 import * as migration_20260307_100049_add_api_key_to_users from './20260307_100049_add_api_key_to_users';
 import * as migration_20260307_120000_add_usdt_decimals from './20260307_120000_add_usdt_decimals';
+import * as migration_20260309_100800 from './20260309_100800';
 
 export const migrations = [
   {
@@ -40,6 +41,11 @@ export const migrations = [
   {
     up: migration_20260307_120000_add_usdt_decimals.up,
     down: migration_20260307_120000_add_usdt_decimals.down,
-    name: '20260307_120000_add_usdt_decimals'
+    name: '20260307_120000_add_usdt_decimals',
+  },
+  {
+    up: migration_20260309_100800.up,
+    down: migration_20260309_100800.down,
+    name: '20260309_100800'
   },
 ];
