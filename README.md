@@ -1,3 +1,10 @@
+---
+layout: default
+title: Exchanger Lotto API Docs
+description: A fiat-to-crypto exchange platform built with Payload CMS and Next.js.
+theme: jekyll-theme-merlot
+---
+
 # Exchanger Lotto
 
 A fiat-to-crypto exchange platform built with Payload CMS and Next.js. Users submit PHP amounts, the system auto-calculates USDT conversion with fees, and processes on-chain transfers via configurable blockchain networks.

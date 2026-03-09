@@ -1,12 +1,16 @@
 import {
   createWalletClient,
   http,
+  nonceManager,
   parseUnits,
   encodeFunctionData,
   type Hex,
   type Address,
+  type WalletClient,
+  type Transport,
+  type Chain,
 } from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
+import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts'
 import type { TransferJobData } from './queues.js'
 
 const ERC20_TRANSFER_ABI = [
@@ -21,9 +25,47 @@ const ERC20_TRANSFER_ABI = [
   },
 ] as const
 
+// Cache account instances per private key so concurrent transfers share the same nonceManager
+const accountCache = new Map<string, PrivateKeyAccount>()
+// Cache wallet clients per account+rpc combination
+const clientCache = new Map<string, WalletClient<Transport, Chain | undefined, PrivateKeyAccount>>()
+
+function getOrCreateAccount(decryptedPrivateKey: string): PrivateKeyAccount {
+  const privateKeyHex = (
+    decryptedPrivateKey.startsWith('0x') ? decryptedPrivateKey : `0x${decryptedPrivateKey}`
+  ) as Hex
+
+  const existing = accountCache.get(privateKeyHex)
+  if (existing) return existing
+
+  const account = privateKeyToAccount(privateKeyHex, { nonceManager })
+  accountCache.set(privateKeyHex, account)
+  return account
+}
+
+function getOrCreateClient(
+  account: PrivateKeyAccount,
+  rpcUrl: string,
+): WalletClient<Transport, Chain | undefined, PrivateKeyAccount> {
+  const cacheKey = `${account.address}:${rpcUrl}`
+  const existing = clientCache.get(cacheKey)
+  if (existing) return existing
+
+  const client = createWalletClient({
+    account,
+    transport: http(rpcUrl),
+  })
+  clientCache.set(cacheKey, client)
+  return client
+}
+
 /**
  * Execute a USDT transfer on the specified EVM network using viem.
  * The decrypted private key is provided in the job data.
+ *
+ * Account and client instances are cached so that concurrent transfers
+ * from the same wallet share viem's built-in nonceManager, preventing
+ * "nonce already known" errors.
  */
 export async function executeTransfer(data: TransferJobData): Promise<{ txHash: string }> {
   const {
@@ -43,17 +85,8 @@ export async function executeTransfer(data: TransferJobData): Promise<{ txHash: 
   console.log(`  Amount: ${amountUsdt} USDT`)
   console.log(`  Contract: ${usdtContractAddress}`)
 
-  // Build viem account from decrypted private key
-  const privateKeyHex = (
-    decryptedPrivateKey.startsWith('0x') ? decryptedPrivateKey : `0x${decryptedPrivateKey}`
-  ) as Hex
-
-  const account = privateKeyToAccount(privateKeyHex)
-
-  const client = createWalletClient({
-    account,
-    transport: http(networkRpcUrl),
-  })
+  const account = getOrCreateAccount(decryptedPrivateKey)
+  const client = getOrCreateClient(account, networkRpcUrl)
 
   // Encode ERC-20 transfer call: transfer(to, amount)
   const decimals = usdtDecimals ?? 6

@@ -6,6 +6,44 @@ import { executeTransfer } from './transfer.js'
 import type { TransferJobData } from './queues.js'
 
 /**
+ * Count completed and failed transactions for a batch, then update the batch
+ * totals and status accordingly. Uses actual DB counts to avoid race conditions
+ * when multiple transfer jobs finish concurrently.
+ */
+async function syncBatchCounts(payload: Awaited<ReturnType<typeof getPayload>>, batchId: number) {
+  const [successResult, failResult] = await Promise.all([
+    payload.count({
+      collection: 'transactions',
+      where: { batch: { equals: batchId }, status: { equals: 'completed' } },
+    }),
+    payload.count({
+      collection: 'transactions',
+      where: { batch: { equals: batchId }, status: { equals: 'review_needed' } },
+    }),
+  ])
+
+  const totalSuccess = successResult.totalDocs
+  const totalFail = failResult.totalDocs
+
+  const batch = await payload.findByID({ collection: 'batches', id: batchId })
+  const totalProcessed = totalSuccess + totalFail
+  const isComplete = totalProcessed >= (batch.transactionCount || 0)
+
+  await payload.update({
+    collection: 'batches',
+    id: batchId,
+    data: {
+      totalTrxSuccess: totalSuccess,
+      totalTrxFail: totalFail,
+      ...(isComplete && {
+        status: totalFail === 0 ? 'success' : totalSuccess === 0 ? 'failed' : 'partial_success',
+        executedAt: new Date().toISOString(),
+      }),
+    },
+  })
+}
+
+/**
  * Transfer worker: processes individual USDT transfers concurrently.
  * Each job = one transaction to transfer on-chain.
  *
@@ -45,28 +83,8 @@ export function startTransferWorker(concurrency = 5) {
           },
         })
 
-        // Update batch success count and check completion
-        const batch = await payload.findByID({
-          collection: 'batches',
-          id: batchId,
-        })
-
-        const newSuccess = (batch.totalTrxSuccess || 0) + 1
-        const totalFail = batch.totalTrxFail || 0
-        const totalProcessed = newSuccess + totalFail
-        const isComplete = totalProcessed >= (batch.transactionCount || 0)
-
-        await payload.update({
-          collection: 'batches',
-          id: batchId,
-          data: {
-            totalTrxSuccess: newSuccess,
-            ...(isComplete && {
-              status: totalFail === 0 ? 'success' : 'partial_success',
-              executedAt: new Date().toISOString(),
-            }),
-          },
-        })
+        // Sync batch counts from actual DB state (avoids race conditions)
+        await syncBatchCounts(payload, batchId)
 
         console.log(`[Transfer] tx #${transactionId} completed: ${txHash}`)
         return { txHash }
@@ -83,28 +101,8 @@ export function startTransferWorker(concurrency = 5) {
           },
         })
 
-        // Update batch fail count and check completion
-        const batch = await payload.findByID({
-          collection: 'batches',
-          id: batchId,
-        })
-
-        const newFail = (batch.totalTrxFail || 0) + 1
-        const totalSuccess = batch.totalTrxSuccess || 0
-        const totalProcessed = totalSuccess + newFail
-        const isComplete = totalProcessed >= (batch.transactionCount || 0)
-
-        await payload.update({
-          collection: 'batches',
-          id: batchId,
-          data: {
-            totalTrxFail: newFail,
-            ...(isComplete && {
-              status: totalSuccess === 0 ? 'failed' : 'partial_success',
-              executedAt: new Date().toISOString(),
-            }),
-          },
-        })
+        // Sync batch counts from actual DB state (avoids race conditions)
+        await syncBatchCounts(payload, batchId)
 
         console.error(`[Transfer] tx #${transactionId} failed:`, message)
         throw err // let BullMQ handle retries
