@@ -18,18 +18,48 @@ export const Transaction: CollectionConfig = {
   },
   hooks: {
     beforeChange: [
-      async ({ data }) => {
+      async ({ data, req }) => {
         if (!data) return data
 
-        const amountUsdt = data.amountUsdt
-        const exchangeRate = data.exchangeRate
-        const markup = data.markup ?? 0
+        // Auto-calculate USDT based on PHP and the selected exchange rate
+        if (data.amountPhp && data.exchangeRate) {
+          try {
+            // exchangeRate could be an ID string or object depending on depth, fetch it via local API
+            const exchangeRateId = typeof data.exchangeRate === 'object' ? data.exchangeRate.id : data.exchangeRate
+            
+            if (exchangeRateId) {
+              const rateDoc = await req.payload.findByID({
+                collection: 'exchange-rates',
+                id: exchangeRateId,
+                depth: 0,
+                req,
+              })
 
-        // Compute amountPhp and profit when admin has filled in rate
-        if (amountUsdt && exchangeRate && exchangeRate > 0) {
-          const basePhp = Math.round(amountUsdt * exchangeRate * 100) / 100
-          data.amountPhp = Math.round((basePhp + markup) * 100) / 100
-          data.profit = Math.round(markup * 100) / 100
+              const originalRate = rateDoc.originalExchangeRate as number
+              const markupRate = rateDoc.markupExchangeRate as number
+
+              if (originalRate > 0 && markupRate > 0) {
+                const usdtOriginal = data.amountPhp * originalRate
+                const usdtFinal = data.amountPhp * markupRate
+
+                data.amountUsdtOriginal = Math.round(usdtOriginal * 1000000) / 1000000
+                data.amountUsdt = Math.round(usdtFinal * 1000000) / 1000000
+
+                // Profit calculation depends on the direction of exchange
+                if (data.type === 'crypto_to_fiat') {
+                  // User sends us USDT. They must send us MORE than the original value for us to profit.
+                  // e.g. Original is 177, we want them to send 185. Profit = 185 - 177 = +8
+                  data.profit = Math.round((usdtFinal - usdtOriginal) * 1000000) / 1000000
+                } else {
+                  // fiat_to_crypto: We send them USDT. We must send LESS than the original value.
+                  // e.g. Original is 177, we send them 170. Profit = 177 - 170 = +7
+                  data.profit = Math.round((usdtOriginal - usdtFinal) * 1000000) / 1000000
+                }
+              }
+            }
+          } catch (err) {
+            req.payload.logger.error(`Error resolving exchange rate values: ${err}`)
+          }
         }
 
         return data
@@ -104,13 +134,13 @@ export const Transaction: CollectionConfig = {
       type: 'row',
       fields: [
         {
-          name: 'amountUsdt',
+          name: 'amountPhp',
           type: 'number',
           required: true,
-          label: 'Amount (USDT)',
+          label: 'Amount (PHP)',
           admin: {
-            step: 0.000001,
-            description: 'Amount of USDT requested',
+            step: 0.01,
+            description: 'Amount of PHP received from the customer',
             width: '50%',
           },
         },
@@ -130,24 +160,41 @@ export const Transaction: CollectionConfig = {
       type: 'row',
       fields: [
         {
-          name: 'exchangeRate',
+          name: 'amountUsdtOriginal',
           type: 'number',
-          label: 'Exchange Rate (PHP per USDT)',
+          label: 'Calculated USDT (Original Rate)',
           admin: {
             step: 0.000001,
-            description: 'PHP per 1 USDT — set by admin',
+            description: 'Auto-computed: amountPhp × originalExchangeRate',
+            readOnly: true,
             width: '50%',
           },
         },
         {
-          name: 'markup',
+          name: 'amountUsdt',
           type: 'number',
-          label: 'Markup (Fixed Amount)',
-          defaultValue: 0,
+          label: 'Total USDT (To Send/Receive)',
           admin: {
-            step: 0.01,
-            description: 'Fixed fee added on top of base PHP amount',
+            step: 0.000001,
+            description: 'Auto-computed: amountPhp × markupExchangeRate',
+            readOnly: true,
             width: '50%',
+          },
+        },
+      ],
+    },
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'exchangeRate',
+          type: 'relationship',
+          relationTo: 'exchange-rates',
+          required: true,
+          label: 'Exchange Rate',
+          admin: {
+            description: 'Select the exchange rate to use for this transaction',
+            width: '100%',
           },
         },
       ],
@@ -165,26 +212,15 @@ export const Transaction: CollectionConfig = {
       type: 'row',
       fields: [
         {
-          name: 'amountPhp',
-          type: 'number',
-          label: 'Amount (PHP)',
-          admin: {
-            step: 0.01,
-            description: 'Auto-computed: (amountUsdt × exchangeRate) + markup',
-            readOnly: true,
-            width: '50%',
-          },
-        },
-        {
           name: 'profit',
           type: 'number',
-          label: 'Profit',
+          label: 'Profit (USDT Default)',
           defaultValue: 0,
           admin: {
-            step: 0.01,
-            description: 'Markup fee collected as profit',
+            step: 0.000001,
+            description: 'Calculated difference based on transaction type',
             readOnly: true,
-            width: '50%',
+            width: '100%',
           },
         },
       ],

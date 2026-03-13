@@ -73,6 +73,7 @@ export interface Config {
     treasury: Treasury;
     transactions: Transaction;
     batches: Batch;
+    'exchange-rates': ExchangeRate;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -90,6 +91,7 @@ export interface Config {
     treasury: TreasurySelect<false> | TreasurySelect<true>;
     transactions: TransactionsSelect<false> | TransactionsSelect<true>;
     batches: BatchesSelect<false> | BatchesSelect<true>;
+    'exchange-rates': ExchangeRatesSelect<false> | ExchangeRatesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -255,27 +257,27 @@ export interface Transaction {
   treasury: number | Treasury;
   network: number | Network;
   /**
-   * Amount of USDT requested
+   * Amount of PHP received from the customer
    */
-  amountUsdt: number;
+  amountPhp: number;
   /**
    * Destination wallet address for the transfer
    */
   targetAddress: string;
   /**
-   * PHP per 1 USDT — set by admin
+   * Auto-computed: amountPhp × originalExchangeRate
    */
-  exchangeRate?: number | null;
+  amountUsdtOriginal?: number | null;
   /**
-   * Fixed fee added on top of base PHP amount
+   * Auto-computed: amountPhp × markupExchangeRate
    */
-  markup?: number | null;
+  amountUsdt?: number | null;
   /**
-   * Auto-computed: (amountUsdt × exchangeRate) + markup
+   * Select the exchange rate to use for this transaction
    */
-  amountPhp?: number | null;
+  exchangeRate: number | ExchangeRate;
   /**
-   * Markup fee collected as profit
+   * Calculated difference based on transaction type
    */
   profit?: number | null;
   /**
@@ -298,6 +300,21 @@ export interface Transaction {
    * Optional reference to a fiat settlement
    */
   fiatSettlementId?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "exchange-rates".
+ */
+export interface ExchangeRate {
+  id: number;
+  originalExchangeRate: number;
+  markupExchangeRate: number;
+  /**
+   * Auto-calculated percentage difference
+   */
+  markupPercentage?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -385,6 +402,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'batches';
         value: number | Batch;
+      } | null)
+    | ({
+        relationTo: 'exchange-rates';
+        value: number | ExchangeRate;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -510,11 +531,11 @@ export interface TransactionsSelect<T extends boolean = true> {
   status?: T;
   treasury?: T;
   network?: T;
-  amountUsdt?: T;
-  targetAddress?: T;
-  exchangeRate?: T;
-  markup?: T;
   amountPhp?: T;
+  targetAddress?: T;
+  amountUsdtOriginal?: T;
+  amountUsdt?: T;
+  exchangeRate?: T;
   profit?: T;
   gasFee?: T;
   txHash?: T;
@@ -538,6 +559,17 @@ export interface BatchesSelect<T extends boolean = true> {
   status?: T;
   executedAt?: T;
   transactions?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "exchange-rates_select".
+ */
+export interface ExchangeRatesSelect<T extends boolean = true> {
+  originalExchangeRate?: T;
+  markupExchangeRate?: T;
+  markupPercentage?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -8,10 +8,10 @@ import sharp from 'sharp'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Treasury } from './collections/Treasury'
-import { WalletConfig } from './collections/WalletConfig'
 import { Transaction } from './collections/Transaction'
 import { Batch } from './collections/Batch'
 import { Network } from './collections/Network'
+import { ExchangeRate } from './collections/ExchangeRate'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -23,7 +23,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Network, Treasury, Transaction, Batch],
+  collections: [Users, Media, Network, Treasury, Transaction, Batch, ExchangeRate],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
