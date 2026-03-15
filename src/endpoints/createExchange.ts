@@ -79,12 +79,18 @@ export const createExchangeEndpoint: Endpoint = {
     }
 
     const treasury = treasuries[0]
+    const exchangeRate = await payload.find({
+      collection: 'exchange-rates',
+    })
 
     // Create the transaction — exchange rate and markup are set by admin later
     const transaction = await payload.create({
       collection: 'transactions',
       data: {
+        exchangeRate: exchangeRate.docs[0]?.id, // Link to the current exchange rate document (if exists)
+        amountPhp: 0,
         type: type as (typeof validTypes)[number],
+        amountUsdtOriginal: amountUsdt,
         amountUsdt,
         network,
         targetAddress: targetAddress.trim(),

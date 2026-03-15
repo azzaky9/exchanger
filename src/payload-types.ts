@@ -221,6 +221,10 @@ export interface Network {
 export interface Treasury {
   id: number;
   /**
+   * A friendly name to identify this wallet (e.g. 'Main USDT Wallet')
+   */
+  walletName: string;
+  /**
    * Public address of your system wallet
    */
   walletAddress: string;
@@ -309,12 +313,31 @@ export interface Transaction {
  */
 export interface ExchangeRate {
   id: number;
-  originalExchangeRate: number;
-  markupExchangeRate: number;
   /**
-   * Auto-calculated percentage difference
+   * Fixed pair for this exchange rate configuration.
    */
-  markupPercentage?: number | null;
+  pair: string;
+  /**
+   * Market/reference rate for 1 USDT in PHP.
+   */
+  referenceRate: number;
+  /**
+   * Rate used when user sells USDT and receives PHP.
+   */
+  usdtToPhpRate: number;
+  /**
+   * Rate used when user pays PHP and receives USDT.
+   */
+  phpToUsdtRate: number;
+  /**
+   * Auto-calculated discount from reference rate.
+   */
+  usdtToPhpMarkupPercentage?: number | null;
+  /**
+   * Auto-calculated premium above reference rate.
+   */
+  phpToUsdtMarkupPercentage?: number | null;
+  isActive?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -514,6 +537,7 @@ export interface NetworksSelect<T extends boolean = true> {
  * via the `definition` "treasury_select".
  */
 export interface TreasurySelect<T extends boolean = true> {
+  walletName?: T;
   walletAddress?: T;
   privateKey?: T;
   network?: T;
@@ -567,9 +591,13 @@ export interface BatchesSelect<T extends boolean = true> {
  * via the `definition` "exchange-rates_select".
  */
 export interface ExchangeRatesSelect<T extends boolean = true> {
-  originalExchangeRate?: T;
-  markupExchangeRate?: T;
-  markupPercentage?: T;
+  pair?: T;
+  referenceRate?: T;
+  usdtToPhpRate?: T;
+  phpToUsdtRate?: T;
+  usdtToPhpMarkupPercentage?: T;
+  phpToUsdtMarkupPercentage?: T;
+  isActive?: T;
   updatedAt?: T;
   createdAt?: T;
 }

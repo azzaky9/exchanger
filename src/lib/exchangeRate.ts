@@ -51,6 +51,11 @@ export async function getPhpToUsdRate(): Promise<number> {
   return data.conversion_rate
 }
 
+export interface ExchangeRateMarkup {
+  phpToUsdRate: number
+  usdToPhpRate: number
+}
+
 const DEFAULT_FEE_PERCENT = Number(process.env.EXCHANGE_FEE_PERCENT) || 2
 
 /**

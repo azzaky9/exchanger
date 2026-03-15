@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { encrypt } from '../lib/encryption'
+import { depositAddressEndpoint } from '@/endpoints/getDepositAddress'
 
 export const Treasury: CollectionConfig = {
   slug: 'treasury',
@@ -9,6 +10,7 @@ export const Treasury: CollectionConfig = {
     group: 'Wallets',
     hidden: ({ user }) => !user?.roles?.includes('admin'),
   },
+  endpoints: [depositAddressEndpoint],
   access: {
     create: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
     read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
@@ -43,6 +45,17 @@ export const Treasury: CollectionConfig = {
     ],
   },
   fields: [
+    {
+      name: 'walletName',
+      type: 'text',
+      label: 'Wallet Name or Identifier',
+      unique: true,
+      required: true,
+      defaultValue: () => `Wallet-${Date.now()}`,
+      admin: {
+        description: "A friendly name to identify this wallet (e.g. 'Main USDT Wallet')",
+      },
+    },
     {
       name: 'walletAddress',
       type: 'text',

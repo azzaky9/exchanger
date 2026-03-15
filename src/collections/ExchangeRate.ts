@@ -1,6 +1,9 @@
 import type { CollectionConfig } from 'payload'
-import { getPhpToUsdRate } from '../lib/exchangeRate'
-import { APIError } from 'payload'
+import { getExchangeRateEndpoint, getExchangeRatePublic } from '@/endpoints/getExchangeRate'
+
+const isAdmin = ({ req: { user } }: { req: { user?: { roles?: string[] } } }) =>
+  user?.roles?.includes('admin') ?? false
+
 export const ExchangeRate: CollectionConfig = {
   slug: 'exchange-rates',
   labels: {
@@ -8,43 +11,41 @@ export const ExchangeRate: CollectionConfig = {
     plural: 'Exchange Rates',
   },
   admin: {
-    useAsTitle: 'id',
+    useAsTitle: 'pair',
+    defaultColumns: [
+      'pair',
+      'referenceRate',
+      'usdtToPhpRate',
+      'phpToUsdtRate',
+      'usdtToPhpMarkupPercentage',
+      'phpToUsdtMarkupPercentage',
+      'updatedAt',
+    ],
   },
   access: {
     read: () => true,
-    create: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
-    update: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
-    delete: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
+    create: isAdmin as any,
+    update: isAdmin as any,
+    delete: isAdmin as any,
   },
-  endpoints: [
-    {
-      path: '/live',
-      method: 'get',
-      handler: async (req) => {
-        if (!req.user) {
-          throw new APIError('Unauthorized', 401)
-        }
-        
-        try {
-          const rate = await getPhpToUsdRate()
-          return Response.json({ rate })
-        } catch (error) {
-          return Response.json({ error: String(error) }, { status: 500 })
-        }
-      },
-    },
-  ],
+  endpoints: [getExchangeRateEndpoint, getExchangeRatePublic],
   hooks: {
     beforeChange: [
       ({ data }) => {
-        if (data.originalExchangeRate && data.markupExchangeRate) {
-          // When using PHP/USD (e.g. 0.0177), a lower markup rate (e.g. 0.0170) means MORE profit.
-          // To display this as a positive percentage to the user, we calculate the profit margin:
-          // (original - markup) / original * 100
-          const diff = data.originalExchangeRate - data.markupExchangeRate
-          const percentage = (diff / data.originalExchangeRate) * 100
-          data.markupPercentage = Math.round(percentage * 100) / 100
+        const referenceRate = Number(data.referenceRate ?? 0)
+        const usdtToPhpRate = Number(data.usdtToPhpRate ?? 0)
+        const phpToUsdtRate = Number(data.phpToUsdtRate ?? 0)
+
+        if (referenceRate > 0 && usdtToPhpRate > 0) {
+          const diff = Math.abs(referenceRate - usdtToPhpRate)
+          data.usdtToPhpMarkupPercentage = Math.round((diff / referenceRate) * 100 * 100) / 100
         }
+
+        if (referenceRate > 0 && phpToUsdtRate > 0) {
+          const diff = Math.abs(phpToUsdtRate - referenceRate)
+          data.phpToUsdtMarkupPercentage = Math.round((diff / referenceRate) * 100 * 100) / 100
+        }
+
         return data
       },
     ],
@@ -60,25 +61,67 @@ export const ExchangeRate: CollectionConfig = {
       },
     },
     {
-      name: 'originalExchangeRate',
-      label: 'Original Exchange Rate',
-      type: 'number',
+      name: 'pair',
+      label: 'Currency Pair',
+      type: 'text',
       required: true,
+      defaultValue: 'USDT/PHP',
+      unique: true,
+      admin: {
+        readOnly: true,
+        description: 'Fixed pair for this exchange rate configuration.',
+      },
     },
     {
-      name: 'markupExchangeRate',
-      label: 'Markup Exchange Rate',
+      name: 'referenceRate',
+      label: 'Reference Rate',
       type: 'number',
       required: true,
+      admin: {
+        description: 'Market/reference rate for 1 USDT in PHP.',
+      },
     },
     {
-      name: 'markupPercentage',
-      label: 'Markup Percentage (%)',
+      name: 'usdtToPhpRate',
+      label: 'USDT → PHP Rate',
+      type: 'number',
+      required: true,
+      admin: {
+        description: 'Rate used when user sells USDT and receives PHP.',
+      },
+    },
+    {
+      name: 'phpToUsdtRate',
+      label: 'PHP → USDT Rate',
+      type: 'number',
+      required: true,
+      admin: {
+        description: 'Rate used when user pays PHP and receives USDT.',
+      },
+    },
+    {
+      name: 'usdtToPhpMarkupPercentage',
+      label: 'USDT → PHP Markup (%)',
       type: 'number',
       admin: {
         readOnly: true,
-        description: 'Auto-calculated percentage difference',
+        description: 'Auto-calculated discount from reference rate.',
       },
+    },
+    {
+      name: 'phpToUsdtMarkupPercentage',
+      label: 'PHP → USDT Markup (%)',
+      type: 'number',
+      admin: {
+        readOnly: true,
+        description: 'Auto-calculated premium above reference rate.',
+      },
+    },
+    {
+      name: 'isActive',
+      label: 'Active',
+      type: 'checkbox',
+      defaultValue: true,
     },
   ],
   timestamps: true,

@@ -25,8 +25,9 @@ export const Transaction: CollectionConfig = {
         if (data.amountPhp && data.exchangeRate) {
           try {
             // exchangeRate could be an ID string or object depending on depth, fetch it via local API
-            const exchangeRateId = typeof data.exchangeRate === 'object' ? data.exchangeRate.id : data.exchangeRate
-            
+            const exchangeRateId =
+              typeof data.exchangeRate === 'object' ? data.exchangeRate.id : data.exchangeRate
+
             if (exchangeRateId) {
               const rateDoc = await req.payload.findByID({
                 collection: 'exchange-rates',
@@ -35,8 +36,8 @@ export const Transaction: CollectionConfig = {
                 req,
               })
 
-              const originalRate = rateDoc.originalExchangeRate as number
-              const markupRate = rateDoc.markupExchangeRate as number
+              const originalRate = rateDoc.referenceRate as number
+              const markupRate = rateDoc.phpToUsdtRate as number
 
               if (originalRate > 0 && markupRate > 0) {
                 const usdtOriginal = data.amountPhp * originalRate
