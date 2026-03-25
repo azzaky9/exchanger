@@ -11,6 +11,7 @@ export const ExchangeRate: CollectionConfig = {
     plural: 'Exchange Rates',
   },
   admin: {
+    hidden: ({ user }) => !user?.roles?.includes('admin'),
     useAsTitle: 'pair',
     defaultColumns: [
       'pair',

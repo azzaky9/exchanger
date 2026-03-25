@@ -17,7 +17,8 @@
     "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts",
     "worker": "cross-env NODE_OPTIONS=--no-deprecation tsx src/worker/index.ts",
-    "worker:dev": "cross-env NODE_OPTIONS=--no-deprecation tsx watch src/worker/index.ts"
+    "worker:dev": "cross-env NODE_OPTIONS=--no-deprecation tsx watch src/worker/index.ts",
+    "seed:networks": "cross-env NODE_OPTIONS=--no-deprecation tsx src/scripts/seed-networks.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.79.0",

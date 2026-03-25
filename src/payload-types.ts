@@ -251,6 +251,10 @@ export interface Treasury {
 export interface Transaction {
   id: number;
   /**
+   * Auto-generated Order ID
+   */
+  orderId?: string | null;
+  /**
    * Direction of the exchange
    */
   type: 'fiat_to_crypto' | 'crypto_to_fiat';
@@ -551,6 +555,7 @@ export interface TreasurySelect<T extends boolean = true> {
  * via the `definition` "transactions_select".
  */
 export interface TransactionsSelect<T extends boolean = true> {
+  orderId?: T;
   type?: T;
   status?: T;
   treasury?: T;

@@ -1,5 +1,6 @@
 import type { Endpoint } from 'payload'
 import { APIError } from 'payload'
+import { randomUUID } from 'crypto'
 
 /**
  * POST /api/transactions/create-exchange
@@ -76,12 +77,12 @@ export const createExchangeEndpoint: Endpoint = {
     }
 
     const treasury = treasuries[0]
-    
+
     // Fetch active exchange rate
     const exchangeRateRes = await payload.find({
       collection: 'exchange-rates',
       where: {
-        isActive: { equals: true }
+        isActive: { equals: true },
       },
       limit: 1,
     })
@@ -105,6 +106,7 @@ export const createExchangeEndpoint: Endpoint = {
     const transaction = await payload.create({
       collection: 'transactions',
       data: {
+        orderId: randomUUID(),
         exchangeRate: currentRate.id,
         amountPhp,
         type: type as (typeof validTypes)[number],
@@ -115,17 +117,22 @@ export const createExchangeEndpoint: Endpoint = {
       },
     })
 
-    const userSends = type === 'fiat_to_crypto' 
-      ? { amount: amount, currency: 'PHP' }
-      : { amount: amount, currency: 'USDT' }
+    const userSends =
+      type === 'fiat_to_crypto'
+        ? { amount: amount, currency: 'PHP' }
+        : { amount: amount, currency: 'USDT' }
 
-    const userReceives = type === 'fiat_to_crypto'
-      ? { amount: transaction.amountUsdt, currency: 'USDT' }
-      : { amount: transaction.amountPhp, currency: 'PHP' }
+    const userReceives =
+      type === 'fiat_to_crypto'
+        ? { amount: transaction.amountUsdt, currency: 'USDT' }
+        : { amount: transaction.amountPhp, currency: 'PHP' }
 
-    const appliedRate = type === 'fiat_to_crypto'
-      ? `1 PHP = ${currentRate.phpToUsdtRate} USDT`
-      : `1 USDT = ${currentRate.usdtToPhpRate} PHP`
+    const appliedRate =
+      type === 'fiat_to_crypto'
+        ? `1 PHP = ${currentRate.phpToUsdtRate} USDT`
+        : `1 USDT = ${currentRate.usdtToPhpRate} PHP`
+
+    const depositAddress = type === 'crypto_to_fiat' ? treasury.walletAddress : undefined
 
     return Response.json({
       success: true,
@@ -133,9 +140,11 @@ export const createExchangeEndpoint: Endpoint = {
         userSends,
         userReceives,
         appliedRate,
+        ...(depositAddress && { depositAddress }),
       },
       transaction: {
         id: transaction.id,
+        orderId: transaction.orderId,
         type: transaction.type,
         amountPhp: transaction.amountPhp,
         amountUsdt: transaction.amountUsdt,

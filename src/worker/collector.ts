@@ -33,6 +33,7 @@ export function startCollectorWorker() {
         collection: 'transactions',
         where: {
           status: { equals: 'fiat_received' },
+          type: { equals: 'fiat_to_crypto' },
         },
         limit: MAX_BATCH_SIZE,
         sort: 'createdAt',

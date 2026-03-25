@@ -1,13 +1,15 @@
 import type { CollectionConfig } from 'payload'
+import crypto from 'node:crypto'
 import { createExchangeEndpoint } from '../endpoints/createExchange'
 import { checkSettlementEndpoint } from '../endpoints/checkSettlement'
+import { settlementStatusEndpoint } from '../endpoints/settlementStatus'
 
 export const Transaction: CollectionConfig = {
   slug: 'transactions',
-  endpoints: [createExchangeEndpoint, checkSettlementEndpoint],
+  endpoints: [createExchangeEndpoint, checkSettlementEndpoint, settlementStatusEndpoint],
   admin: {
-    useAsTitle: 'id',
-    defaultColumns: ['amountUsdt', 'network', 'status', 'createdAt'],
+    useAsTitle: 'orderId',
+    defaultColumns: ['orderId', 'amountUsdt', 'network', 'status', 'createdAt'],
     group: 'Operations',
   },
   access: {
@@ -72,6 +74,26 @@ export const Transaction: CollectionConfig = {
     ],
   },
   fields: [
+    {
+      name: 'orderId',
+      type: 'text',
+      unique: true,
+      index: true,
+      admin: {
+        readOnly: true,
+        description: 'Auto-generated Order ID',
+      },
+      hooks: {
+        beforeValidate: [
+          ({ value, operation }) => {
+            if (operation === 'create' && !value) {
+              return crypto.randomUUID()
+            }
+            return value
+          },
+        ],
+      },
+    },
     {
       type: 'row',
       fields: [
@@ -168,6 +190,9 @@ export const Transaction: CollectionConfig = {
           name: 'amountUsdtOriginal',
           type: 'number',
           label: 'Calculated USDT (Original Rate)',
+          access: {
+            read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
+          },
           admin: {
             step: 0.000001,
             description: 'Auto-computed: amountPhp × originalExchangeRate',
@@ -197,6 +222,9 @@ export const Transaction: CollectionConfig = {
           relationTo: 'exchange-rates',
           required: true,
           label: 'Exchange Rate',
+          access: {
+            read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
+          },
           admin: {
             description: 'Select the exchange rate to use for this transaction',
             width: '100%',
@@ -208,6 +236,7 @@ export const Transaction: CollectionConfig = {
       name: 'exchangeRateCalculator',
       type: 'ui',
       admin: {
+        condition: (_, __, { user }) => Boolean(user?.roles?.includes('admin')),
         components: {
           Field: '/components/ExchangeRateCalculator#ExchangeRateCalculator',
         },
@@ -221,6 +250,9 @@ export const Transaction: CollectionConfig = {
           type: 'number',
           label: 'Profit (USDT Default)',
           defaultValue: 0,
+          access: {
+            read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
+          },
           admin: {
             step: 0.000001,
             description: 'Calculated difference based on transaction type',

@@ -16,11 +16,6 @@ export const depositAddressEndpoint: Endpoint = {
 
     const { docs } = await req.payload.find({
       collection: 'treasury',
-      where: {
-        walletName: {
-          equals: 'Deposit Wallet (Vault)',
-        },
-      },
       limit: 1,
       depth: 1,
       overrideAccess: true,

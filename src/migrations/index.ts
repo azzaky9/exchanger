@@ -8,6 +8,7 @@ import * as migration_20260307_120000_add_usdt_decimals from './20260307_120000_
 import * as migration_20260309_100800 from './20260309_100800';
 import * as migration_20260324_233712 from './20260324_233712';
 import * as migration_20260325_014437 from './20260325_014437';
+import * as migration_20260325_050955_add_order_id_to_transactions from './20260325_050955_add_order_id_to_transactions';
 
 export const migrations = [
   {
@@ -58,6 +59,11 @@ export const migrations = [
   {
     up: migration_20260325_014437.up,
     down: migration_20260325_014437.down,
-    name: '20260325_014437'
+    name: '20260325_014437',
+  },
+  {
+    up: migration_20260325_050955_add_order_id_to_transactions.up,
+    down: migration_20260325_050955_add_order_id_to_transactions.down,
+    name: '20260325_050955_add_order_id_to_transactions'
   },
 ];
