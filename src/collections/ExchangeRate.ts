@@ -42,8 +42,9 @@ export const ExchangeRate: CollectionConfig = {
         }
 
         if (referenceRate > 0 && phpToUsdtRate > 0) {
-          const diff = Math.abs(phpToUsdtRate - referenceRate)
-          data.phpToUsdtMarkupPercentage = Math.round((diff / referenceRate) * 100 * 100) / 100
+          const impliedPhpToUsdt = 1 / referenceRate // convert referenceRate to same unit
+          const diff = Math.abs(impliedPhpToUsdt - phpToUsdtRate)
+          data.phpToUsdtMarkupPercentage = Math.round((diff / impliedPhpToUsdt) * 100 * 100) / 100
         }
 
         return data

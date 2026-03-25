@@ -52,7 +52,7 @@ export function LiveRateReference() {
         {error && <span style={{ color: 'var(--theme-error-400)' }}>⚠️ Error: {error}</span>}
         {liveRate && (
           <span style={{ fontSize: '16px', fontWeight: 'bold' }}>
-            1 USDT = {liveRate.toFixed(4)} PHP
+            1 PHP = {liveRate.toFixed(4)} USDT
           </span>
         )}
       </div>

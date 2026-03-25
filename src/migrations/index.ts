@@ -6,6 +6,8 @@ import * as migration_20260306_175925_batch_monitoring from './20260306_175925_b
 import * as migration_20260307_100049_add_api_key_to_users from './20260307_100049_add_api_key_to_users';
 import * as migration_20260307_120000_add_usdt_decimals from './20260307_120000_add_usdt_decimals';
 import * as migration_20260309_100800 from './20260309_100800';
+import * as migration_20260324_233712 from './20260324_233712';
+import * as migration_20260325_014437 from './20260325_014437';
 
 export const migrations = [
   {
@@ -46,6 +48,16 @@ export const migrations = [
   {
     up: migration_20260309_100800.up,
     down: migration_20260309_100800.down,
-    name: '20260309_100800'
+    name: '20260309_100800',
+  },
+  {
+    up: migration_20260324_233712.up,
+    down: migration_20260324_233712.down,
+    name: '20260324_233712',
+  },
+  {
+    up: migration_20260325_014437.up,
+    down: migration_20260325_014437.down,
+    name: '20260325_014437'
   },
 ];

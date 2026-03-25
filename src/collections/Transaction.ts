@@ -37,25 +37,29 @@ export const Transaction: CollectionConfig = {
               })
 
               const originalRate = rateDoc.referenceRate as number
-              const markupRate = rateDoc.phpToUsdtRate as number
+              const usdtToPhpRate = rateDoc.usdtToPhpRate as number
+              const phpToUsdtRate = rateDoc.phpToUsdtRate as number
 
-              if (originalRate > 0 && markupRate > 0) {
-                const usdtOriginal = data.amountPhp * originalRate
-                const usdtFinal = data.amountPhp * markupRate
+              if (originalRate > 0) {
+                const usdtOriginal = data.amountPhp / originalRate
+                let usdtFinal = 0
+                let profit = 0
+
+                if (data.type === 'crypto_to_fiat') {
+                  // User sends USDT, gets PHP
+                  // They must send (amountPhp / usdtToPhpRate)
+                  usdtFinal = data.amountPhp / usdtToPhpRate
+                  profit = usdtFinal - usdtOriginal
+                } else {
+                  // User sends PHP, gets USDT (fiat_to_crypto)
+                  // We send them (amountPhp * phpToUsdtRate)
+                  usdtFinal = data.amountPhp * phpToUsdtRate
+                  profit = usdtOriginal - usdtFinal
+                }
 
                 data.amountUsdtOriginal = Math.round(usdtOriginal * 1000000) / 1000000
                 data.amountUsdt = Math.round(usdtFinal * 1000000) / 1000000
-
-                // Profit calculation depends on the direction of exchange
-                if (data.type === 'crypto_to_fiat') {
-                  // User sends us USDT. They must send us MORE than the original value for us to profit.
-                  // e.g. Original is 177, we want them to send 185. Profit = 185 - 177 = +8
-                  data.profit = Math.round((usdtFinal - usdtOriginal) * 1000000) / 1000000
-                } else {
-                  // fiat_to_crypto: We send them USDT. We must send LESS than the original value.
-                  // e.g. Original is 177, we send them 170. Profit = 177 - 170 = +7
-                  data.profit = Math.round((usdtOriginal - usdtFinal) * 1000000) / 1000000
-                }
+                data.profit = Math.round(profit * 1000000) / 1000000
               }
             }
           } catch (err) {

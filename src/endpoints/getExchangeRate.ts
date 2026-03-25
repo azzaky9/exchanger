@@ -28,7 +28,7 @@ export const getExchangeRateEndpoint: Endpoint = {
 }
 
 export const getExchangeRatePublic: Endpoint = {
-  path: '/',
+  path: '/current',
   method: 'get',
   handler: async (req) => {
     if (!req.user) {

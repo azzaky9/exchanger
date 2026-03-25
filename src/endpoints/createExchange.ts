@@ -7,12 +7,9 @@ import { APIError } from 'payload'
  * Creates an exchange transaction (fiat-to-crypto or crypto-to-fiat).
  * Auto-selects a treasury wallet for the chosen network.
  *
- * Exchange rate and markup are set later by admin in the panel.
- * amountPhp is auto-computed from amountUsdt × exchangeRate × (1 + markup%).
- *
  * Body:
  *   - type: 'fiat_to_crypto' | 'crypto_to_fiat' (required)
- *   - amountUsdt: number (required — USDT amount)
+ *   - amount: number (required — amount in the source currency: PHP for fiat_to_crypto, USDT for crypto_to_fiat)
  *   - network: number (network ID, required)
  *   - targetAddress: string (destination wallet, required)
  *
@@ -29,9 +26,9 @@ export const createExchangeEndpoint: Endpoint = {
     const body =
       typeof req.json === 'function' ? await req.json() : (req as unknown as { body: unknown }).body
 
-    const { type, amountUsdt, network, targetAddress } = body as {
+    const { type, amount, network, targetAddress } = body as {
       type?: string
-      amountUsdt?: number
+      amount?: number
       network?: number
       targetAddress?: string
     }
@@ -42,8 +39,8 @@ export const createExchangeEndpoint: Endpoint = {
     }
 
     // Validate required fields
-    if (!amountUsdt || typeof amountUsdt !== 'number' || amountUsdt <= 0) {
-      throw new APIError('amountUsdt is required and must be a positive number', 400)
+    if (!amount || typeof amount !== 'number' || amount <= 0) {
+      throw new APIError('amount is required and must be a positive number', 400)
     }
     if (!network || typeof network !== 'number') {
       throw new APIError('network is required (network ID)', 400)
@@ -79,19 +76,38 @@ export const createExchangeEndpoint: Endpoint = {
     }
 
     const treasury = treasuries[0]
-    const exchangeRate = await payload.find({
+    
+    // Fetch active exchange rate
+    const exchangeRateRes = await payload.find({
       collection: 'exchange-rates',
+      where: {
+        isActive: { equals: true }
+      },
+      limit: 1,
     })
 
-    // Create the transaction — exchange rate and markup are set by admin later
+    if (exchangeRateRes.docs.length === 0) {
+      throw new APIError('No active exchange rate found', 400)
+    }
+    const currentRate = exchangeRateRes.docs[0]
+
+    // Calculate amountPhp based on the transaction type and source amount
+    let amountPhp = 0
+    if (type === 'fiat_to_crypto') {
+      // User is sending PHP
+      amountPhp = amount
+    } else if (type === 'crypto_to_fiat') {
+      // User is sending USDT, they get PHP based on the usdtToPhpRate
+      amountPhp = amount * (currentRate.usdtToPhpRate as number)
+    }
+
+    // Create the transaction
     const transaction = await payload.create({
       collection: 'transactions',
       data: {
-        exchangeRate: exchangeRate.docs[0]?.id, // Link to the current exchange rate document (if exists)
-        amountPhp: 0,
+        exchangeRate: currentRate.id,
+        amountPhp,
         type: type as (typeof validTypes)[number],
-        amountUsdtOriginal: amountUsdt,
-        amountUsdt,
         network,
         targetAddress: targetAddress.trim(),
         treasury: treasury.id,
@@ -99,11 +115,29 @@ export const createExchangeEndpoint: Endpoint = {
       },
     })
 
+    const userSends = type === 'fiat_to_crypto' 
+      ? { amount: amount, currency: 'PHP' }
+      : { amount: amount, currency: 'USDT' }
+
+    const userReceives = type === 'fiat_to_crypto'
+      ? { amount: transaction.amountUsdt, currency: 'USDT' }
+      : { amount: transaction.amountPhp, currency: 'PHP' }
+
+    const appliedRate = type === 'fiat_to_crypto'
+      ? `1 PHP = ${currentRate.phpToUsdtRate} USDT`
+      : `1 USDT = ${currentRate.usdtToPhpRate} PHP`
+
     return Response.json({
       success: true,
+      exchangeDetails: {
+        userSends,
+        userReceives,
+        appliedRate,
+      },
       transaction: {
         id: transaction.id,
         type: transaction.type,
+        amountPhp: transaction.amountPhp,
         amountUsdt: transaction.amountUsdt,
         network: transaction.network,
         targetAddress: transaction.targetAddress,
