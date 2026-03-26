@@ -12,7 +12,7 @@ const MAX_BATCH_SIZE = Number(process.env.MAX_BATCH_SIZE) || 20
 
 /**
  * Collector worker: runs every 5 minutes via a repeatable job.
- * Fetches "fiat_received" transactions, creates a single batch,
+ * Fetches "confirmed" transactions, creates a single batch,
  * and enqueues transfer jobs with decrypted treasury private keys.
  *
  * A batch can contain transfers across multiple networks/treasuries.
@@ -28,11 +28,11 @@ export function startCollectorWorker() {
 
       console.log(`[Collector] Job ${job.id} started at ${job.data.triggeredAt}`)
 
-      // Fetch "fiat_received" transactions with populated relations
+      // Fetch "confirmed" transactions with populated relations
       const { docs: transactions } = await payload.find({
         collection: 'transactions',
         where: {
-          status: { equals: 'fiat_received' },
+          status: { equals: 'confirmed' },
           type: { equals: 'fiat_to_crypto' },
         },
         limit: MAX_BATCH_SIZE,
@@ -152,7 +152,7 @@ export function startCollectorWorker() {
           id: tx.id,
           data: {
             batch: batch.id,
-            status: 'crypto_transfer_pending',
+            status: 'processing',
           },
         })
 

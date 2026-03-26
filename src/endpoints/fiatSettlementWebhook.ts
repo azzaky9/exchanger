@@ -6,7 +6,7 @@ import crypto from 'node:crypto'
  * POST /api/transactions/webhook/fiat-settlement
  *
  * Webhook called by the external fiat settlement service to mark
- * a transaction as "fiat_received" with the settlement reference.
+ * a transaction as "confirmed" with the settlement reference.
  *
  * Secured via HMAC-SHA256 signature in the `x-webhook-signature` header.
  * The service signs the raw JSON body with the shared WEBHOOK_SECRET.
@@ -78,25 +78,25 @@ export const fiatSettlementWebhookEndpoint: Endpoint = {
       throw new APIError('Transaction not found', 404)
     }
 
-    if (transaction.status !== 'awaiting_fiat') {
+    if (transaction.status !== 'pending') {
       throw new APIError(
-        `Transaction is not awaiting fiat (current status: ${transaction.status})`,
+        `Transaction is not pending (current status: ${transaction.status})`,
         409,
       )
     }
 
-    // Update transaction to fiat_received
+    // Update transaction to confirmed
     const updated = await payload.update({
       collection: 'transactions',
       id: transactionId,
       data: {
-        status: 'fiat_received',
+        status: 'confirmed',
         fiatSettlementId: fiatSettlementId.trim(),
       },
     })
 
     console.log(
-      `[Webhook] Transaction #${transactionId} marked as fiat_received (settlement: ${fiatSettlementId})`,
+      `[Webhook] Transaction #${transactionId} marked as confirmed (settlement: ${fiatSettlementId})`,
     )
 
     return Response.json({

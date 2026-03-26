@@ -125,7 +125,7 @@ export const retryBatchEndpoint: Endpoint = {
         collection: 'transactions',
         id: tx.id,
         data: {
-          status: 'crypto_transfer_pending',
+          status: 'processing',
           failReason: '',
           txHash: '',
         },

@@ -258,14 +258,14 @@ export interface Transaction {
    * Direction of the exchange
    */
   type: 'fiat_to_crypto' | 'crypto_to_fiat';
-  status: 'awaiting_fiat' | 'fiat_received' | 'crypto_transfer_pending' | 'completed' | 'refunded' | 'review_needed';
+  status: 'pending' | 'confirmed' | 'processing' | 'completed' | 'refunded' | 'review_needed';
   /**
    * Source treasury wallet for the transfer
    */
   treasury: number | Treasury;
   network: number | Network;
   /**
-   * Amount of PHP received from the customer
+   * Amount in source currency (PHP for fiat→crypto, USDT for crypto→fiat)
    */
   amountPhp: number;
   /**
@@ -273,11 +273,11 @@ export interface Transaction {
    */
   targetAddress: string;
   /**
-   * Auto-computed: amountPhp × originalExchangeRate
+   * Auto-computed at the reference/original exchange rate
    */
   amountUsdtOriginal?: number | null;
   /**
-   * Auto-computed: amountPhp × markupExchangeRate
+   * Auto-computed at the markup/applied exchange rate
    */
   amountUsdt?: number | null;
   /**

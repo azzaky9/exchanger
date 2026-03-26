@@ -8,9 +8,23 @@ export const Transaction: CollectionConfig = {
   slug: 'transactions',
   endpoints: [createExchangeEndpoint, checkSettlementEndpoint, settlementStatusEndpoint],
   admin: {
-    useAsTitle: 'orderId',
-    defaultColumns: ['orderId', 'amountUsdt', 'network', 'status', 'createdAt'],
+    useAsTitle: 'id',
+    defaultColumns: [
+      'id',
+      'type',
+      'status',
+      'amountUsdt',
+      'amountPhp',
+      'profit',
+      'profitPercentage',
+      'targetAddress',
+      'txHash',
+      'createdAt',
+    ],
     group: 'Operations',
+    components: {
+      beforeListTable: ['/components/TransactiontypeFilter#TransactionTypeFilter'],
+    },
   },
   access: {
     create: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
@@ -43,24 +57,26 @@ export const Transaction: CollectionConfig = {
               const phpToUsdtRate = rateDoc.phpToUsdtRate as number
 
               if (originalRate > 0) {
-                const usdtOriginal = data.amountPhp / originalRate
-                let usdtFinal = 0
+                let amountAtOriginalRate = 0
+                let amountFinal = 0
                 let profit = 0
 
                 if (data.type === 'crypto_to_fiat') {
-                  // User sends USDT, gets PHP
-                  // They must send (amountPhp / usdtToPhpRate)
-                  usdtFinal = data.amountPhp / usdtToPhpRate
-                  profit = usdtFinal - usdtOriginal
+                  // amountPhp field holds the USDT amount the user sends.
+                  // Convert USDT → PHP using both rates.
+                  amountAtOriginalRate = data.amountPhp * originalRate // PHP at reference rate
+                  amountFinal = data.amountPhp * usdtToPhpRate // PHP user actually receives
+                  profit = amountAtOriginalRate - amountFinal // PHP profit (exchanger keeps spread)
                 } else {
-                  // User sends PHP, gets USDT (fiat_to_crypto)
-                  // We send them (amountPhp * phpToUsdtRate)
-                  usdtFinal = data.amountPhp * phpToUsdtRate
-                  profit = usdtOriginal - usdtFinal
+                  // fiat_to_crypto: amountPhp = PHP the user sends.
+                  // Convert PHP → USDT using both rates.
+                  amountAtOriginalRate = data.amountPhp / originalRate // USDT at reference rate
+                  amountFinal = data.amountPhp * phpToUsdtRate // USDT user actually receives
+                  profit = amountAtOriginalRate - amountFinal // USDT profit (exchanger keeps spread)
                 }
 
-                data.amountUsdtOriginal = Math.round(usdtOriginal * 1000000) / 1000000
-                data.amountUsdt = Math.round(usdtFinal * 1000000) / 1000000
+                data.amountUsdtOriginal = Math.round(amountAtOriginalRate * 1000000) / 1000000
+                data.amountUsdt = Math.round(amountFinal * 1000000) / 1000000
                 data.profit = Math.round(profit * 1000000) / 1000000
               }
             }
@@ -116,11 +132,11 @@ export const Transaction: CollectionConfig = {
           name: 'status',
           type: 'select',
           required: true,
-          defaultValue: 'awaiting_fiat',
+          defaultValue: 'pending',
           options: [
-            { label: 'Awaiting Fiat', value: 'awaiting_fiat' },
-            { label: 'Fiat Received', value: 'fiat_received' },
-            { label: 'Crypto Transfer Pending', value: 'crypto_transfer_pending' },
+            { label: 'Pending', value: 'pending' },
+            { label: 'Confirmed', value: 'confirmed' },
+            { label: 'Processing', value: 'processing' },
             { label: 'Completed', value: 'completed' },
             { label: 'Refunded', value: 'refunded' },
             { label: 'Review Needed', value: 'review_needed' },
@@ -164,11 +180,15 @@ export const Transaction: CollectionConfig = {
           name: 'amountPhp',
           type: 'number',
           required: true,
-          label: 'Amount (PHP)',
+          label: 'Total Received (₱/USDT)',
           admin: {
             step: 0.01,
-            description: 'Amount of PHP received from the customer',
+            description: 'Amount in source currency (PHP for fiat→crypto, USDT for crypto→fiat)',
             width: '50%',
+            components: {
+              Label: '/components/DynamicAmountLabel#AmountLabel',
+              Cell: '/components/AmountSentCell#AmountSentCell',
+            },
           },
         },
         {
@@ -189,26 +209,34 @@ export const Transaction: CollectionConfig = {
         {
           name: 'amountUsdtOriginal',
           type: 'number',
-          label: 'Calculated USDT (Original Rate)',
+          label: 'Calculated Amount (Original Rate)',
           access: {
             read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
           },
           admin: {
             step: 0.000001,
-            description: 'Auto-computed: amountPhp × originalExchangeRate',
+            description: 'Auto-computed at the reference/original exchange rate',
             readOnly: true,
             width: '50%',
+            components: {
+              Label: '/components/DynamicAmountLabel#AmountOriginalLabel',
+              Cell: '/components/AmountReceivedCell#AmountReceivedCell',
+            },
           },
         },
         {
           name: 'amountUsdt',
           type: 'number',
-          label: 'Total USDT (To Send/Receive)',
+          label: 'Total Amount sent (USDT/₱)',
           admin: {
             step: 0.000001,
-            description: 'Auto-computed: amountPhp × markupExchangeRate',
+            description: 'Auto-computed at the markup/applied exchange rate',
             readOnly: true,
             width: '50%',
+            components: {
+              Label: '/components/DynamicAmountLabel#AmountFinalLabel',
+              Cell: '/components/AmountReceivedCell#AmountReceivedCell',
+            },
           },
         },
       ],
@@ -248,7 +276,7 @@ export const Transaction: CollectionConfig = {
         {
           name: 'profit',
           type: 'number',
-          label: 'Profit (USDT Default)',
+          label: 'Profit',
           defaultValue: 0,
           access: {
             read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
@@ -258,9 +286,24 @@ export const Transaction: CollectionConfig = {
             description: 'Calculated difference based on transaction type',
             readOnly: true,
             width: '100%',
+            components: {
+              Label: '/components/DynamicAmountLabel#ProfitLabel',
+              Cell: '/components/AmountReceivedCell#AmountReceivedCell',
+            },
           },
         },
       ],
+    },
+    {
+      name: 'profitPercentage',
+      type: 'ui',
+      admin: {
+        condition: (_, __, { user }) => Boolean(user?.roles?.includes('admin')),
+        components: {
+          Field: '/components/ProfitPercentageCell#ProfitPercentageCell',
+          Cell: '/components/ProfitPercentageCell#ProfitPercentageCell',
+        },
+      },
     },
     {
       type: 'row',

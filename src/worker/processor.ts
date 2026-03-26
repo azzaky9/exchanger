@@ -63,11 +63,11 @@ export function startTransferWorker(concurrency = 5) {
         `[Transfer] Job ${job.id}: tx #${transactionId} | ${amountUsdt} USDT on ${networkSymbol}`,
       )
 
-      // Mark transaction as crypto transfer pending
+      // Mark transaction as processing
       await payload.update({
         collection: 'transactions',
         id: transactionId,
-        data: { status: 'crypto_transfer_pending' },
+        data: { status: 'processing' },
       })
 
       try {

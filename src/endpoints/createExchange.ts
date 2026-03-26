@@ -113,7 +113,7 @@ export const createExchangeEndpoint: Endpoint = {
         network,
         targetAddress: targetAddress.trim(),
         treasury: treasury.id,
-        status: 'awaiting_fiat',
+        status: 'pending',
       },
     })
 

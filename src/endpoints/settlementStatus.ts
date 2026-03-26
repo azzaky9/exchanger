@@ -45,7 +45,7 @@ export const settlementStatusEndpoint: Endpoint = {
     }
 
     const transaction = transactions.docs[0]
-    const isFiatSettled = transaction.status !== 'awaiting_fiat'
+    const isFiatSettled = transaction.status !== 'pending'
 
     return Response.json({
       success: true,

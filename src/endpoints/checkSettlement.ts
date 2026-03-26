@@ -41,7 +41,7 @@ export const checkSettlementEndpoint: Endpoint = {
       throw new APIError('Transaction not found', 404)
     }
 
-    const isFiatSettled = transaction.status !== 'awaiting_fiat'
+    const isFiatSettled = transaction.status !== 'pending'
 
     return Response.json({
       success: true,
