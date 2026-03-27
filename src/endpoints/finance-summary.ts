@@ -48,6 +48,8 @@ export const financeSummaryEndpoint: Endpoint = {
     const preset = searchParams.get('preset') // today|week|month|year|all
     const fromParam = searchParams.get('from')
     const toParam = searchParams.get('to')
+    const statusParam = searchParams.get('status')
+    const typeParam = searchParams.get('type')
 
     let from: Date | undefined
     const to: Date = toParam ? new Date(toParam) : new Date()
@@ -72,6 +74,12 @@ export const financeSummaryEndpoint: Endpoint = {
         less_than_equal: to.toISOString(),
       }
     }
+    if (statusParam && statusParam !== 'all') {
+      where.status = { equals: statusParam }
+    }
+    if (typeParam && typeParam !== 'all') {
+      where.type = { equals: typeParam }
+    }
 
     const result = await req.payload.find({
       collection: 'transactions',
@@ -92,16 +100,34 @@ export const financeSummaryEndpoint: Endpoint = {
     let volumeUsdt = 0
     let completed = 0
     let pending = 0
+    let pendingSentUsdt = 0
+    let pendingSentPhp = 0
     const dailyMap: Record<string, { usdt: number; php: number }> = {}
 
     for (const tx of docs) {
       const p = tx.profit ?? 0
-      if (tx.type === 'crypto_to_fiat') profitPhp += p
-      if (tx.type === 'fiat_to_crypto') profitUsdt += p
-      volumePhp += tx.amountPhp ?? 0
-      volumeUsdt += tx.amountUsdt ?? 0
+      const isFiatToCrypto = tx.type === 'fiat_to_crypto'
+
+      if (isFiatToCrypto) {
+        profitUsdt += p
+        volumePhp += tx.amountPhp ?? 0 // Source is PHP
+        volumeUsdt += tx.amountUsdt ?? 0 // Target is USDT
+      } else {
+        // crypto_to_fiat
+        profitPhp += p
+        volumeUsdt += tx.amountPhp ?? 0 // Source is USDT
+        volumePhp += tx.amountUsdt ?? 0 // Target is PHP
+      }
+
       if (tx.status === 'completed') completed++
-      if (['pending', 'confirmed', 'processing'].includes(tx.status)) pending++
+      if (['pending', 'confirmed', 'processing'].includes(tx.status)) {
+        pending++
+        if (tx.type === 'fiat_to_crypto') {
+          pendingSentUsdt += tx.amountUsdt ?? 0
+        } else {
+          pendingSentPhp += tx.amountUsdt ?? 0
+        }
+      }
 
       const day = tx.createdAt.slice(0, 10)
       if (!dailyMap[day]) dailyMap[day] = { usdt: 0, php: 0 }
@@ -133,6 +159,8 @@ export const financeSummaryEndpoint: Endpoint = {
         totalTx: docs.length,
         completed,
         pending,
+        pendingSentUsdt: round(pendingSentUsdt),
+        pendingSentPhp: round(pendingSentPhp),
       },
       chartData,
       recent,

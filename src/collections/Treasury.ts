@@ -69,7 +69,7 @@ export const Treasury: CollectionConfig = {
     {
       name: 'privateKey',
       type: 'text',
-      required: true,
+      required: false,
       label: 'Private Key',
       admin: {
         description: 'Encrypted at rest. Enter the raw private key — it will be encrypted on save.',

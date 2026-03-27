@@ -12,6 +12,8 @@ import { Transaction } from './collections/Transaction'
 import { Batch } from './collections/Batch'
 import { Network } from './collections/Network'
 import { ExchangeRate } from './collections/ExchangeRate'
+import { Received } from './collections/Received'
+import { Sending } from './collections/Sending'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -32,7 +34,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Network, Treasury, Transaction, Batch, ExchangeRate],
+  collections: [Users, Media, Network, Treasury, Transaction, Batch, ExchangeRate, Received, Sending],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

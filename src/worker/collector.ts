@@ -163,7 +163,7 @@ export function startCollectorWorker() {
             batchId: batch.id,
             networkSymbol: network.symbol,
             networkRpcUrl: network.rpcUrl,
-            targetAddress: tx.targetAddress,
+            targetAddress: tx.targetAddress as string,
             amountUsdt: tx.amountUsdt ?? 0,
             treasuryWalletAddress: treasury.walletAddress,
             usdtContractAddress: network.usdtContractAddress,

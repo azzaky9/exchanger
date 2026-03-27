@@ -32,6 +32,8 @@ type Summary = {
   totalPending: number
   totalCompleted: number
   count: number
+  pendingSentUsdt: number
+  pendingSentPhp: number
 }
 
 function startOfUtc(period: 'day' | 'week' | 'month' | 'year'): Date {
@@ -184,28 +186,36 @@ export function TransactionSummaryBanner() {
       }[]
 
   // Accumulate per type — from EXCHANGER perspective
-  let receivedPhp = 0,    // fiat_to_crypto: exchanger receives PHP  (amountPhp)
-    sentUsdt = 0,         // fiat_to_crypto: exchanger sends USDT    (amountUsdt)
-    receivedUsdt = 0,     // crypto_to_fiat: exchanger receives USDT (amountPhp field stores small USDT)
-    sentPhp = 0,          // crypto_to_fiat: exchanger sends PHP      (amountUsdt field stores large PHP)
-    totalPending = 0,
-    totalCompleted = 0
+    let receivedPhp = 0,    // fiat_to_crypto: exchanger receives PHP  (amountPhp)
+      sentUsdt = 0,         // fiat_to_crypto: exchanger sends USDT    (amountUsdt)
+      receivedUsdt = 0,     // crypto_to_fiat: exchanger receives USDT (amountPhp field stores small USDT)
+      sentPhp = 0,          // crypto_to_fiat: exchanger sends PHP      (amountUsdt field stores large PHP)
+      totalPending = 0,
+      totalCompleted = 0,
+      pendingSentUsdt = 0,
+      pendingSentPhp = 0
 
-      for (const tx of docs) {
-        if (tx.type === 'fiat_to_crypto') {
-          receivedPhp += tx.amountPhp ?? 0   // PHP customer paid in
-          sentUsdt    += tx.amountUsdt ?? 0  // USDT exchanger sent out
-        } else {
-          // crypto_to_fiat: amountPhp stores USDT the exchanger received from customer
-          //                 amountUsdt stores PHP the exchanger paid out to customer
-          receivedUsdt += tx.amountPhp ?? 0  // USDT received
-          sentPhp      += tx.amountUsdt ?? 0 // PHP paid out
-        }
-        if (['pending', 'confirmed', 'processing'].includes(tx.status)) totalPending++
-        if (tx.status === 'completed') totalCompleted++
+    for (const tx of docs) {
+      if (tx.type === 'fiat_to_crypto') {
+        receivedPhp += tx.amountPhp ?? 0   // PHP customer paid in
+        sentUsdt    += tx.amountUsdt ?? 0  // USDT exchanger sent out
+      } else {
+        receivedUsdt += tx.amountPhp ?? 0  // USDT received
+        sentPhp      += tx.amountUsdt ?? 0 // PHP paid out
       }
+      
+      if (['pending', 'confirmed', 'processing'].includes(tx.status)) {
+        totalPending++
+        if (tx.type === 'fiat_to_crypto') {
+          pendingSentUsdt += tx.amountUsdt ?? 0
+        } else {
+          pendingSentPhp += tx.amountUsdt ?? 0
+        }
+      }
+      if (tx.status === 'completed') totalCompleted++
+    }
 
-      setSummary({ receivedPhp, sentUsdt, receivedUsdt, sentPhp, totalPending, totalCompleted, count: docs.length })
+    setSummary({ receivedPhp, sentUsdt, receivedUsdt, sentPhp, totalPending, totalCompleted, count: docs.length, pendingSentUsdt, pendingSentPhp })
     } catch {
       // silent
     } finally {
@@ -260,7 +270,12 @@ export function TransactionSummaryBanner() {
           <AmountCell label="PHP Sent" amount={summary.sentPhp} isCrypto={false} accent="#7c3aed" />
         )}
 
-        <CountCard label="Pending" value={summary.totalPending} accent="#f97316" sub="In progress" />
+        <CountCard 
+          label="Pending" 
+          value={summary.totalPending} 
+          accent="#f97316" 
+          sub={`Sent Pending: ₱${summary.pendingSentPhp.toLocaleString()} | ${summary.pendingSentUsdt.toLocaleString()} USDT`} 
+        />
         <CountCard label="Completed" value={summary.totalCompleted} accent="#2563eb" sub={`of ${summary.count} total`} />
       </div>
     </div>

@@ -15,6 +15,8 @@ interface KPIs {
   totalTx: number
   completed: number
   pending: number
+  pendingSentUsdt: number
+  pendingSentPhp: number
 }
 
 interface ChartPoint {
@@ -359,10 +361,12 @@ export function FinanceDashboardView() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [data, setData] = useState<SummaryData | null>(null)
+  const [status, setStatus] = useState('all')
+  const [type, setType] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetch_ = useCallback(async (p: Preset, f: string, t: string) => {
+  const fetch_ = useCallback(async (p: Preset, f: string, t: string, st: string, ty: string) => {
     setLoading(true)
     setError(null)
     try {
@@ -373,6 +377,9 @@ export function FinanceDashboardView() {
       } else {
         params.set('preset', p)
       }
+      if (st !== 'all') params.set('status', st)
+      if (ty !== 'all') params.set('type', ty)
+
       const res = await fetch(`/api/transactions/finance-summary?${params}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       setData(await res.json())
@@ -384,15 +391,15 @@ export function FinanceDashboardView() {
   }, [])
 
   useEffect(() => {
-    fetch_(preset, from, to)
-  }, [preset]) // eslint-disable-line react-hooks/exhaustive-deps
+    fetch_(preset, from, to, status, type)
+  }, [preset, status, type]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePreset = (p: Preset) => {
     setPreset(p)
   }
   const handleCustomApply = () => {
     setPreset('custom')
-    fetch_('custom', from, to)
+    fetch_('custom', from, to, status, type)
   }
 
   const PRESETS: { label: string; value: Preset }[] = [
@@ -439,7 +446,7 @@ export function FinanceDashboardView() {
         {
           label: 'In Progress',
           value: kpis.pending.toLocaleString(),
-          sub: 'Pending / Confirmed / Processing',
+          sub: `Sent Pending: ₱${fmt(kpis.pendingSentPhp, 2)} | ${fmt(kpis.pendingSentUsdt)} USDT`,
           accent: '#f97316',
         },
       ]
@@ -490,6 +497,32 @@ export function FinanceDashboardView() {
         <button style={s.presetBtn(preset === 'custom')} onClick={handleCustomApply}>
           Apply
         </button>
+
+        <span style={{ color: 'var(--theme-elevation-300)', margin: '0 4px' }}>|</span>
+
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          style={{ ...s.dateInput, minWidth: '120px' }}
+        >
+          <option value="all">All Types</option>
+          <option value="fiat_to_crypto">Fiat → Crypto</option>
+          <option value="crypto_to_fiat">Crypto → Fiat</option>
+        </select>
+
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          style={{ ...s.dateInput, minWidth: '120px' }}
+        >
+          <option value="all">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="processing">Processing</option>
+          <option value="completed">Completed</option>
+          <option value="refunded">Refunded</option>
+          <option value="review_needed">Review Needed</option>
+        </select>
       </div>
 
       {loading && (
@@ -600,16 +633,15 @@ export function FinanceDashboardView() {
                         </span>
                       </td>
                       <td style={{ ...s.td, textAlign: 'right' as const }}>
-                        {
-                          tx.type === 'fiat_to_crypto'
-                            ? `₱${fmt(tx.amountPhp, 2)}` // fiat_to_crypto: customer sends PHP
-                            : `${fmt(tx.amountUsdt)} USDT` // crypto_to_fiat: customer sends USDT
+                        {tx.type === 'fiat_to_crypto'
+                          ? `₱${fmt(tx.amountPhp, 2)}`
+                          : `${fmt(tx.amountPhp, 6)} USDT`
                         }
                       </td>
                       <td style={{ ...s.td, textAlign: 'right' as const }}>
                         {tx.type === 'fiat_to_crypto'
-                          ? `${fmt(tx.amountUsdt)} USDT`
-                          : `₱${fmt(tx.amountPhp, 2)}`}
+                          ? `${fmt(tx.amountUsdt, 6)} USDT`
+                          : `₱${fmt(tx.amountUsdt, 2)}`}
                       </td>
                       <td
                         style={{

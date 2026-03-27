@@ -74,6 +74,8 @@ export interface Config {
     transactions: Transaction;
     batches: Batch;
     'exchange-rates': ExchangeRate;
+    received: Received;
+    sending: Sending;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -92,6 +94,8 @@ export interface Config {
     transactions: TransactionsSelect<false> | TransactionsSelect<true>;
     batches: BatchesSelect<false> | BatchesSelect<true>;
     'exchange-rates': ExchangeRatesSelect<false> | ExchangeRatesSelect<true>;
+    received: ReceivedSelect<false> | ReceivedSelect<true>;
+    sending: SendingSelect<false> | SendingSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -271,7 +275,11 @@ export interface Transaction {
   /**
    * Destination wallet address for the transfer
    */
-  targetAddress: string;
+  targetAddress?: string | null;
+  /**
+   * Bank Name, Account Number, and Account Name
+   */
+  bankDetails?: string | null;
   /**
    * Auto-computed at the reference/original exchange rate
    */
@@ -308,6 +316,8 @@ export interface Transaction {
    * Optional reference to a fiat settlement
    */
   fiatSettlementId?: string | null;
+  receivedRecord?: (number | null) | Received;
+  sendingRecord?: (number | null) | Sending;
   updatedAt: string;
   createdAt: string;
 }
@@ -373,6 +383,39 @@ export interface Batch {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "received".
+ */
+export interface Received {
+  id: number;
+  amount: number;
+  currency: 'PHP' | 'USDT';
+  transaction: number | Transaction;
+  status: 'pending' | 'confirmed';
+  method?: ('bank_transfer' | 'crypto') | null;
+  referenceNumber?: string | null;
+  senderAddress?: string | null;
+  txHash?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sending".
+ */
+export interface Sending {
+  id: number;
+  amount: number;
+  currency: 'PHP' | 'USDT';
+  transaction: number | Transaction;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  method?: ('bank_transfer' | 'crypto') | null;
+  txHash?: string | null;
+  receiverDetails?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -422,6 +465,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'exchange-rates';
         value: number | ExchangeRate;
+      } | null)
+    | ({
+        relationTo: 'received';
+        value: number | Received;
+      } | null)
+    | ({
+        relationTo: 'sending';
+        value: number | Sending;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -551,6 +602,7 @@ export interface TransactionsSelect<T extends boolean = true> {
   network?: T;
   amountPhp?: T;
   targetAddress?: T;
+  bankDetails?: T;
   amountUsdtOriginal?: T;
   amountUsdt?: T;
   exchangeRate?: T;
@@ -560,6 +612,8 @@ export interface TransactionsSelect<T extends boolean = true> {
   batch?: T;
   failReason?: T;
   fiatSettlementId?: T;
+  receivedRecord?: T;
+  sendingRecord?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -593,6 +647,37 @@ export interface ExchangeRatesSelect<T extends boolean = true> {
   phpToUsdtMarkupPercentage?: T;
   isActive?: T;
   _lastEdited?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "received_select".
+ */
+export interface ReceivedSelect<T extends boolean = true> {
+  amount?: T;
+  currency?: T;
+  transaction?: T;
+  status?: T;
+  method?: T;
+  referenceNumber?: T;
+  senderAddress?: T;
+  txHash?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sending_select".
+ */
+export interface SendingSelect<T extends boolean = true> {
+  amount?: T;
+  currency?: T;
+  transaction?: T;
+  status?: T;
+  method?: T;
+  txHash?: T;
+  receiverDetails?: T;
   updatedAt?: T;
   createdAt?: T;
 }

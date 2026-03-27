@@ -15,7 +15,7 @@ export const Batch: CollectionConfig = {
       'createdAt',
     ],
     group: 'Operations',
-    hidden: ({ user }) => !user?.roles?.includes('admin'),
+    hidden: () => true,
   },
   access: {
     create: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
