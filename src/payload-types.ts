@@ -322,26 +322,15 @@ export interface ExchangeRate {
    */
   pair: string;
   /**
-   * Market/reference rate for 1 USDT in PHP.
+   * Market/reference rate for 1 USDT in PHP. Changing this recalculates both rates automatically.
    */
   referenceRate: number;
-  /**
-   * Rate used when user sells USDT and receives PHP.
-   */
   usdtToPhpRate: number;
-  /**
-   * Rate used when user pays PHP and receives USDT.
-   */
-  phpToUsdtRate: number;
-  /**
-   * Auto-calculated discount from reference rate.
-   */
   usdtToPhpMarkupPercentage?: number | null;
-  /**
-   * Auto-calculated premium above reference rate.
-   */
+  phpToUsdtRate: number;
   phpToUsdtMarkupPercentage?: number | null;
   isActive?: boolean | null;
+  _lastEdited?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -599,10 +588,11 @@ export interface ExchangeRatesSelect<T extends boolean = true> {
   pair?: T;
   referenceRate?: T;
   usdtToPhpRate?: T;
-  phpToUsdtRate?: T;
   usdtToPhpMarkupPercentage?: T;
+  phpToUsdtRate?: T;
   phpToUsdtMarkupPercentage?: T;
   isActive?: T;
+  _lastEdited?: T;
   updatedAt?: T;
   createdAt?: T;
 }

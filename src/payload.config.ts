@@ -19,6 +19,15 @@ const dirname = path.dirname(filename)
 export default buildConfig({
   admin: {
     user: Users.slug,
+    components: {
+      views: {
+        financeDashboard: {
+          Component: '/components/FinanceDashboard#FinanceDashboardView',
+          path: '/finance',
+        },
+      },
+      beforeNavLinks: ['/components/FinanceNavLink#FinanceNavLink'],
+    },
     importMap: {
       baseDir: path.resolve(dirname),
     },

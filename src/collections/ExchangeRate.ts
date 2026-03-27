@@ -31,21 +31,60 @@ export const ExchangeRate: CollectionConfig = {
   },
   endpoints: [getExchangeRateEndpoint, getExchangeRatePublic],
   hooks: {
+    /**
+     * beforeChange resolves whichever field was the "source of truth" last.
+     *
+     * The custom UI component stamps `_lastEdited` onto the submission:
+     *   'usdtToPhpRate'           → rate was typed; recalc percentage
+     *   'usdtToPhpMarkupPercentage' → percentage was typed; recalc rate
+     *   'phpToUsdtRate'           → rate was typed; recalc percentage
+     *   'phpToUsdtMarkupPercentage' → percentage was typed; recalc rate
+     *
+     * If `_lastEdited` is absent (e.g. API calls without the UI) we fall back
+     * to deriving percentages from the rates (original behaviour).
+     */
     beforeChange: [
       ({ data }) => {
         const referenceRate = Number(data.referenceRate ?? 0)
-        const usdtToPhpRate = Number(data.usdtToPhpRate ?? 0)
-        const phpToUsdtRate = Number(data.phpToUsdtRate ?? 0)
+        const lastEdited: string | undefined = data._lastEdited
+        delete data._lastEdited // never persist this sentinel
 
-        if (referenceRate > 0 && usdtToPhpRate > 0) {
-          const diff = Math.abs(referenceRate - usdtToPhpRate)
-          data.usdtToPhpMarkupPercentage = Math.round((diff / referenceRate) * 100 * 100) / 100
+        // ── USDT → PHP side ──────────────────────────────────────────────────
+        if (referenceRate > 0) {
+          if (lastEdited === 'usdtToPhpMarkupPercentage') {
+            // Percentage changed → derive rate
+            const pct = Number(data.usdtToPhpMarkupPercentage ?? 0)
+            // Selling USDT: user gets LESS PHP than market (discount for platform)
+            data.usdtToPhpRate = Math.round(referenceRate * (1 - pct / 100) * 10000) / 10000
+          } else {
+            // Rate changed (or no sentinel) → derive percentage
+            const usdtToPhpRate = Number(data.usdtToPhpRate ?? 0)
+            if (usdtToPhpRate > 0) {
+              const diff = Math.abs(referenceRate - usdtToPhpRate)
+              data.usdtToPhpMarkupPercentage = Math.round((diff / referenceRate) * 100 * 100) / 100
+            }
+          }
         }
 
-        if (referenceRate > 0 && phpToUsdtRate > 0) {
-          const impliedPhpToUsdt = 1 / referenceRate // convert referenceRate to same unit
-          const diff = Math.abs(impliedPhpToUsdt - phpToUsdtRate)
-          data.phpToUsdtMarkupPercentage = Math.round((diff / impliedPhpToUsdt) * 100 * 100) / 100
+        // ── PHP → USDT side ──────────────────────────────────────────────────
+        if (referenceRate > 0) {
+          // Base: how many USDT per 1 PHP at market rate
+          const impliedPhpToUsdt = 1 / referenceRate
+
+          if (lastEdited === 'phpToUsdtMarkupPercentage') {
+            // Percentage changed → derive rate
+            const pct = Number(data.phpToUsdtMarkupPercentage ?? 0)
+            // Buying USDT: user gets LESS USDT per PHP than market (platform keeps margin)
+            data.phpToUsdtRate = Math.round(impliedPhpToUsdt * (1 - pct / 100) * 1e8) / 1e8
+          } else {
+            // Rate changed (or no sentinel) → derive percentage
+            const phpToUsdtRate = Number(data.phpToUsdtRate ?? 0)
+            if (phpToUsdtRate > 0) {
+              const diff = Math.abs(impliedPhpToUsdt - phpToUsdtRate)
+              data.phpToUsdtMarkupPercentage =
+                Math.round((diff / impliedPhpToUsdt) * 100 * 100) / 100
+            }
+          }
         }
 
         return data
@@ -53,6 +92,7 @@ export const ExchangeRate: CollectionConfig = {
     ],
   },
   fields: [
+    // Live rate banner (read-only UI component)
     {
       name: 'liveApiRate',
       type: 'ui',
@@ -62,6 +102,7 @@ export const ExchangeRate: CollectionConfig = {
         },
       },
     },
+
     {
       name: 'pair',
       label: 'Currency Pair',
@@ -74,31 +115,37 @@ export const ExchangeRate: CollectionConfig = {
         description: 'Fixed pair for this exchange rate configuration.',
       },
     },
+
     {
       name: 'referenceRate',
-      label: 'Reference Rate',
+      label: 'Reference Rate (1 USDT = ? PHP)',
       type: 'number',
       required: true,
       admin: {
-        description: 'Market/reference rate for 1 USDT in PHP.',
+        description:
+          'Market/reference rate for 1 USDT in PHP. Changing this recalculates both rates automatically.',
       },
     },
+
+    // ── USDT → PHP group ───────────────────────────────────────────────────
+    {
+      name: 'usdtToPhpRateGroup',
+      type: 'ui',
+      admin: {
+        components: {
+          // Linked rate+percentage editor for the USDT→PHP side
+          Field: '/components/LinkedRateField#LinkedRateField',
+        },
+      },
+    },
+
     {
       name: 'usdtToPhpRate',
       label: 'USDT → PHP Rate',
       type: 'number',
       required: true,
       admin: {
-        description: 'Rate used when user sells USDT and receives PHP.',
-      },
-    },
-    {
-      name: 'phpToUsdtRate',
-      label: 'PHP → USDT Rate',
-      type: 'number',
-      required: true,
-      admin: {
-        description: 'Rate used when user pays PHP and receives USDT.',
+        hidden: true,
       },
     },
     {
@@ -106,8 +153,28 @@ export const ExchangeRate: CollectionConfig = {
       label: 'USDT → PHP Markup (%)',
       type: 'number',
       admin: {
-        readOnly: true,
-        description: 'Auto-calculated discount from reference rate.',
+        hidden: true,
+      },
+    },
+
+    // ── PHP → USDT group ───────────────────────────────────────────────────
+    {
+      name: 'phpToUsdtRateGroup',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '/components/LinkedRateField#LinkedRateFieldPhp',
+        },
+      },
+    },
+
+    {
+      name: 'phpToUsdtRate',
+      label: 'PHP → USDT Rate',
+      type: 'number',
+      required: true,
+      admin: {
+        hidden: true,
       },
     },
     {
@@ -115,15 +182,30 @@ export const ExchangeRate: CollectionConfig = {
       label: 'PHP → USDT Markup (%)',
       type: 'number',
       admin: {
-        readOnly: true,
-        description: 'Auto-calculated premium above reference rate.',
+        hidden: true,
       },
     },
+
     {
       name: 'isActive',
       label: 'Active',
       type: 'checkbox',
       defaultValue: true,
+    },
+
+    /**
+     * Virtual sentinel field — never stored in the DB.
+     * The LinkedRateField component writes the name of whichever field the
+     * admin last edited here so the beforeChange hook can resolve conflicts.
+     *
+     * Values: 'usdtToPhpRate' | 'usdtToPhpMarkupPercentage'
+     *       | 'phpToUsdtRate' | 'phpToUsdtMarkupPercentage'
+     */
+    {
+      name: '_lastEdited',
+      type: 'text',
+      virtual: true,
+      admin: { hidden: true },
     },
   ],
   timestamps: true,

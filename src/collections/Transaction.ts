@@ -3,10 +3,16 @@ import crypto from 'node:crypto'
 import { createExchangeEndpoint } from '../endpoints/createExchange'
 import { checkSettlementEndpoint } from '../endpoints/checkSettlement'
 import { settlementStatusEndpoint } from '../endpoints/settlementStatus'
+import { financeSummaryEndpoint } from '../endpoints/finance-summary'
 
 export const Transaction: CollectionConfig = {
   slug: 'transactions',
-  endpoints: [createExchangeEndpoint, checkSettlementEndpoint, settlementStatusEndpoint],
+  endpoints: [
+    createExchangeEndpoint,
+    checkSettlementEndpoint,
+    settlementStatusEndpoint,
+    financeSummaryEndpoint,
+  ],
   admin: {
     useAsTitle: 'id',
     defaultColumns: [
@@ -23,7 +29,10 @@ export const Transaction: CollectionConfig = {
     ],
     group: 'Operations',
     components: {
-      beforeListTable: ['/components/TransactiontypeFilter#TransactionTypeFilter'],
+      beforeListTable: [
+        '/components/TransactionSummaryBanner#TransactionSummaryBanner',
+        '/components/TransactiontypeFilter#TransactionTypeFilter',
+      ],
     },
   },
   access: {
@@ -300,7 +309,7 @@ export const Transaction: CollectionConfig = {
       admin: {
         condition: (_, __, { user }) => Boolean(user?.roles?.includes('admin')),
         components: {
-          Field: '/components/ProfitPercentageCell#ProfitPercentageCell',
+          // Field: '/components/ProfitPercentageCell#ProfitPercentageCell',
           Cell: '/components/ProfitPercentageCell#ProfitPercentageCell',
         },
       },

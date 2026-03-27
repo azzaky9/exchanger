@@ -1,5 +1,6 @@
 'use client'
 import type { DefaultCellComponentProps } from 'payload'
+import { useAuth } from '@payloadcms/ui'
 
 type RowData = {
   type?: 'fiat_to_crypto' | 'crypto_to_fiat'
@@ -16,8 +17,13 @@ type RowData = {
  * expressed in the same currency (USDT for fiat→crypto, PHP for crypto→fiat).
  */
 export function ProfitPercentageCell({ rowData }: DefaultCellComponentProps) {
+  const { user } = useAuth()
+
+  // Hide entirely for non-admin users
+  if (!(user as any)?.roles?.includes('admin')) return null
+
   const row = rowData as RowData
-  const profit = row.profit
+  const profit = typeof row.profit !== 'undefined' ? row.profit : 0
   const base = row.amountUsdtOriginal
 
   if (profit == null || base == null || base === 0) {
