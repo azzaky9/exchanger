@@ -189,7 +189,9 @@ const s = {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmt = (n: number | null, decimals = 4) =>
-  n == null ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: decimals })
+  n == null
+    ? '—'
+    : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: decimals })
 
 const statusColor = (s: string) => {
   const m: Record<string, string> = {
@@ -231,8 +233,21 @@ function BarChart({ data }: { data: ChartPoint[] }) {
         const val = (i / ticks) * maxVal
         return (
           <g key={i}>
-            <line x1={PAD.left} x2={PAD.left + innerW} y1={y} y2={y} stroke="var(--theme-elevation-150)" strokeDasharray="4 3" />
-            <text x={PAD.left - 6} y={y + 4} textAnchor="end" fontSize={9} fill="var(--theme-elevation-500)">
+            <line
+              x1={PAD.left}
+              x2={PAD.left + innerW}
+              y1={y}
+              y2={y}
+              stroke="var(--theme-elevation-150)"
+              strokeDasharray="4 3"
+            />
+            <text
+              x={PAD.left - 6}
+              y={y + 4}
+              textAnchor="end"
+              fontSize={9}
+              fill="var(--theme-elevation-500)"
+            >
               {yLabel(val)}
             </text>
           </g>
@@ -240,7 +255,13 @@ function BarChart({ data }: { data: ChartPoint[] }) {
       })}
 
       {isEmpty && (
-        <text x={PAD.left + innerW / 2} y={PAD.top + innerH / 2} textAnchor="middle" fontSize={12} fill="var(--theme-elevation-400)">
+        <text
+          x={PAD.left + innerW / 2}
+          y={PAD.top + innerH / 2}
+          textAnchor="middle"
+          fontSize={12}
+          fill="var(--theme-elevation-400)"
+        >
           No data for this period
         </text>
       )}
@@ -253,7 +274,12 @@ function BarChart({ data }: { data: ChartPoint[] }) {
         const hUsdt = (d.profitUsdt / maxVal) * innerH
         const hPhp = (d.profitPhp / maxVal) * innerH
 
-        const label = data.length <= 31 ? d.date.slice(5) : i % Math.ceil(data.length / 12) === 0 ? d.date.slice(0, 7) : ''
+        const label =
+          data.length <= 31
+            ? d.date.slice(5)
+            : i % Math.ceil(data.length / 12) === 0
+              ? d.date.slice(0, 7)
+              : ''
 
         return (
           <g key={d.date}>
@@ -268,7 +294,9 @@ function BarChart({ data }: { data: ChartPoint[] }) {
                 fill="#16a34a"
                 opacity={0.85}
               >
-                <title>USDT Profit: {d.profitUsdt} on {d.date}</title>
+                <title>
+                  USDT Profit: {d.profitUsdt} on {d.date}
+                </title>
               </rect>
             )}
             {/* PHP profit bar (blue) */}
@@ -282,7 +310,9 @@ function BarChart({ data }: { data: ChartPoint[] }) {
                 fill="#2563eb"
                 opacity={0.8}
               >
-                <title>PHP Profit: {d.profitPhp} on {d.date}</title>
+                <title>
+                  PHP Profit: {d.profitPhp} on {d.date}
+                </title>
               </rect>
             )}
             {/* X label */}
@@ -303,9 +333,21 @@ function BarChart({ data }: { data: ChartPoint[] }) {
 
       {/* Legend */}
       <rect x={PAD.left} y={H - 10} width={8} height={8} rx={1} fill="#16a34a" opacity={0.85} />
-      <text x={PAD.left + 12} y={H - 3} fontSize={9} fill="var(--theme-elevation-600)">USDT Profit (fiat→crypto)</text>
-      <rect x={PAD.left + 130} y={H - 10} width={8} height={8} rx={1} fill="#2563eb" opacity={0.8} />
-      <text x={PAD.left + 144} y={H - 3} fontSize={9} fill="var(--theme-elevation-600)">PHP Profit (crypto→fiat)</text>
+      <text x={PAD.left + 12} y={H - 3} fontSize={9} fill="var(--theme-elevation-600)">
+        USDT Profit (fiat→crypto)
+      </text>
+      <rect
+        x={PAD.left + 130}
+        y={H - 10}
+        width={8}
+        height={8}
+        rx={1}
+        fill="#2563eb"
+        opacity={0.8}
+      />
+      <text x={PAD.left + 144} y={H - 3} fontSize={9} fill="var(--theme-elevation-600)">
+        PHP Profit (crypto→fiat)
+      </text>
     </svg>
   )
 }
@@ -341,10 +383,17 @@ export function FinanceDashboardView() {
     }
   }, [])
 
-  useEffect(() => { fetch_(preset, from, to) }, [preset]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetch_(preset, from, to)
+  }, [preset]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handlePreset = (p: Preset) => { setPreset(p) }
-  const handleCustomApply = () => { setPreset('custom'); fetch_('custom', from, to) }
+  const handlePreset = (p: Preset) => {
+    setPreset(p)
+  }
+  const handleCustomApply = () => {
+    setPreset('custom')
+    fetch_('custom', from, to)
+  }
 
   const PRESETS: { label: string; value: Preset }[] = [
     { label: 'Today', value: 'today' },
@@ -357,12 +406,42 @@ export function FinanceDashboardView() {
   const kpis = data?.kpis
   const cards = kpis
     ? [
-        { label: 'Profit (USDT)', value: `${fmt(kpis.profitUsdt)} USDT`, sub: 'Fiat → Crypto transactions', accent: '#16a34a' },
-        { label: 'Profit (PHP)', value: `₱${fmt(kpis.profitPhp, 2)}`, sub: 'Crypto → Fiat transactions', accent: '#2563eb' },
-        { label: 'Volume PHP', value: `₱${fmt(kpis.volumePhp, 2)}`, sub: 'Total PHP received/sent', accent: '#7c3aed' },
-        { label: 'Volume USDT', value: `${fmt(kpis.volumeUsdt)} USDT`, sub: 'Total USDT received/sent', accent: '#0891b2' },
-        { label: 'Completed', value: kpis.completed.toLocaleString(), sub: `of ${kpis.totalTx} total`, accent: '#ca8a04' },
-        { label: 'In Progress', value: kpis.pending.toLocaleString(), sub: 'Pending / Confirmed / Processing', accent: '#f97316' },
+        {
+          label: 'Profit (USDT)',
+          value: `${fmt(kpis.profitUsdt)} USDT`,
+          sub: 'Fiat → Crypto transactions',
+          accent: '#16a34a',
+        },
+        {
+          label: 'Profit (PHP)',
+          value: `₱${fmt(kpis.profitPhp, 2)}`,
+          sub: 'Crypto → Fiat transactions',
+          accent: '#2563eb',
+        },
+        {
+          label: 'Volume PHP',
+          value: `₱${fmt(kpis.volumePhp, 2)}`,
+          sub: 'Total PHP received/sent',
+          accent: '#7c3aed',
+        },
+        {
+          label: 'Volume USDT',
+          value: `${fmt(kpis.volumeUsdt)} USDT`,
+          sub: 'Total USDT received/sent',
+          accent: '#0891b2',
+        },
+        {
+          label: 'Completed',
+          value: kpis.completed.toLocaleString(),
+          sub: `of ${kpis.totalTx} total`,
+          accent: '#ca8a04',
+        },
+        {
+          label: 'In Progress',
+          value: kpis.pending.toLocaleString(),
+          sub: 'Pending / Confirmed / Processing',
+          accent: '#f97316',
+        },
       ]
     : []
 
@@ -370,7 +449,16 @@ export function FinanceDashboardView() {
     <div style={s.page}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
         <Link href="/admin" style={s.backLink}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <polyline points="15 18 9 12 15 6" />
           </svg>
           Back
@@ -382,12 +470,21 @@ export function FinanceDashboardView() {
       {/* Filter bar */}
       <div style={s.filterBar}>
         {PRESETS.map((p) => (
-          <button key={p.value} style={s.presetBtn(preset === p.value)} onClick={() => handlePreset(p.value)}>
+          <button
+            key={p.value}
+            style={s.presetBtn(preset === p.value)}
+            onClick={() => handlePreset(p.value)}
+          >
             {p.label}
           </button>
         ))}
         <span style={{ color: 'var(--theme-elevation-300)', margin: '0 4px' }}>|</span>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={s.dateInput} />
+        <input
+          type="date"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          style={s.dateInput}
+        />
         <span style={{ color: 'var(--theme-elevation-400)', fontSize: '12px' }}>to</span>
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={s.dateInput} />
         <button style={s.presetBtn(preset === 'custom')} onClick={handleCustomApply}>
@@ -398,9 +495,7 @@ export function FinanceDashboardView() {
       {loading && (
         <p style={{ color: 'var(--theme-elevation-500)', marginBottom: '24px' }}>Loading…</p>
       )}
-      {error && (
-        <p style={{ color: '#dc2626', marginBottom: '24px' }}>Error: {error}</p>
-      )}
+      {error && <p style={{ color: '#dc2626', marginBottom: '24px' }}>Error: {error}</p>}
 
       {/* KPI Cards */}
       {!loading && kpis && (
@@ -429,59 +524,115 @@ export function FinanceDashboardView() {
       {!loading && data && (
         <div style={s.section}>
           <div style={s.sectionTitle}>Recent Transactions</div>
-          <div style={{ background: 'var(--theme-elevation-50)', border: '1px solid var(--theme-elevation-150)', borderRadius: '8px', overflow: 'hidden' }}>
+          <div
+            style={{
+              background: 'var(--theme-elevation-50)',
+              border: '1px solid var(--theme-elevation-150)',
+              borderRadius: '8px',
+              overflow: 'hidden',
+            }}
+          >
             <table style={s.table}>
               <thead>
                 <tr>
-                  {['Order ID', 'Type', 'Status', 'Received', 'Sent', 'Profit', 'Created'].map((h) => (
-                    <th key={h} style={s.th}>{h}</th>
-                  ))}
+                  {['Order ID', 'Type', 'Status', 'Received', 'Sent', 'Profit', 'Created'].map(
+                    (h) => (
+                      <th key={h} style={s.th}>
+                        {h}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {data.recent.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ ...s.td, textAlign: 'center', color: 'var(--theme-elevation-400)', padding: '24px' }}>
+                    <td
+                      colSpan={7}
+                      style={{
+                        ...s.td,
+                        textAlign: 'center',
+                        color: 'var(--theme-elevation-400)',
+                        padding: '24px',
+                      }}
+                    >
                       No transactions in this period
                     </td>
                   </tr>
                 ) : (
                   data.recent.map((tx) => (
-                    <tr key={tx.id} style={{ transition: 'background 0.1s' }} onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--theme-elevation-100)')} onMouseLeave={(e) => (e.currentTarget.style.background = '')}>
+                    <tr
+                      key={tx.id}
+                      style={{ transition: 'background 0.1s' }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = 'var(--theme-elevation-100)')
+                      }
+                      onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+                    >
                       <td style={s.td}>
-                        <code style={{ fontSize: '11px', opacity: 0.75 }}>{tx.orderId?.slice(0, 8) ?? tx.id}</code>
+                        <code style={{ fontSize: '11px', opacity: 0.75 }}>
+                          {tx.orderId?.slice(0, 8) ?? tx.id}
+                        </code>
                       </td>
                       <td style={s.td}>
-                        <span style={{ fontSize: '12px', padding: '2px 7px', borderRadius: '4px', background: tx.type === 'fiat_to_crypto' ? '#d1fae5' : '#dbeafe', color: tx.type === 'fiat_to_crypto' ? '#065f46' : '#1e40af', fontWeight: 600 }}>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            padding: '2px 7px',
+                            borderRadius: '4px',
+                            background: tx.type === 'fiat_to_crypto' ? '#d1fae5' : '#dbeafe',
+                            color: tx.type === 'fiat_to_crypto' ? '#065f46' : '#1e40af',
+                            fontWeight: 600,
+                          }}
+                        >
                           {typeBadge(tx.type)}
                         </span>
                       </td>
                       <td style={s.td}>
-                        <span style={{ fontSize: '12px', color: statusColor(tx.status), fontWeight: 600 }}>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            color: statusColor(tx.status),
+                            fontWeight: 600,
+                          }}
+                        >
                           {tx.status}
                         </span>
                       </td>
                       <td style={{ ...s.td, textAlign: 'right' as const }}>
-                        {tx.type === 'fiat_to_crypto'
-                          ? `₱${fmt(tx.amountPhp, 2)}`
-                          : `${fmt(tx.amountUsdt)} USDT`
+                        {
+                          tx.type === 'fiat_to_crypto'
+                            ? `₱${fmt(tx.amountPhp, 2)}` // fiat_to_crypto: customer sends PHP
+                            : `${fmt(tx.amountUsdt)} USDT` // crypto_to_fiat: customer sends USDT
                         }
                       </td>
                       <td style={{ ...s.td, textAlign: 'right' as const }}>
                         {tx.type === 'fiat_to_crypto'
                           ? `${fmt(tx.amountUsdt)} USDT`
-                          : `₱${fmt(tx.amountPhp, 2)}`
-                        }
+                          : `₱${fmt(tx.amountPhp, 2)}`}
                       </td>
-                      <td style={{ ...s.td, textAlign: 'right' as const, color: (tx.profit ?? 0) >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                      <td
+                        style={{
+                          ...s.td,
+                          textAlign: 'right' as const,
+                          color: (tx.profit ?? 0) >= 0 ? '#16a34a' : '#dc2626',
+                          fontWeight: 600,
+                        }}
+                      >
                         {tx.profit != null
                           ? tx.type === 'fiat_to_crypto'
                             ? `${fmt(tx.profit)} USDT`
                             : `₱${fmt(tx.profit, 2)}`
                           : '—'}
                       </td>
-                      <td style={{ ...s.td, fontSize: '12px', color: 'var(--theme-elevation-500)' }}>
-                        {new Date(tx.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <td
+                        style={{ ...s.td, fontSize: '12px', color: 'var(--theme-elevation-500)' }}
+                      >
+                        {new Date(tx.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
                       </td>
                     </tr>
                   ))
