@@ -235,7 +235,7 @@ export interface Treasury {
   /**
    * Encrypted at rest. Enter the raw private key — it will be encrypted on save.
    */
-  privateKey: string;
+  privateKey?: string | null;
   network: number | Network;
   /**
    * Track available funds

@@ -31,7 +31,7 @@ export const Transaction: CollectionConfig = {
     components: {
       beforeListTable: [
         '/components/TransactionSummaryBanner#TransactionSummaryBanner',
-        '/components/TransactiontypeFilter#TransactionTypeFilter',
+        '/components/TransactionTypeFilter#TransactionTypeFilter',
       ],
     },
   },

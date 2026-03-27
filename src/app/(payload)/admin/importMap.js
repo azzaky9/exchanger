@@ -7,7 +7,7 @@ import { ExchangeRateCalculator as ExchangeRateCalculator_9a632a9b6b4222b273edd2
 import { ProfitLabel as ProfitLabel_6aa801537ec68bf01e73927a12b8b816 } from '../../../components/DynamicAmountLabel'
 import { ProfitPercentageCell as ProfitPercentageCell_9b47ee4405832f5d2df818bac20940d1 } from '../../../components/ProfitPercentageCell'
 import { TransactionSummaryBanner as TransactionSummaryBanner_09c9eb81b144cbf42883de02be793b86 } from '../../../components/TransactionSummaryBanner'
-import { TransactionTypeFilter as TransactionTypeFilter_c4d671a01597447a98ffe87713e9e6d5 } from '../../../components/TransactiontypeFilter'
+import { TransactionTypeFilter as TransactionTypeFilter_5eb21d65400f488ce5d607df928218d8 } from '../../../components/TransactionTypeFilter'
 import { RetryFailedButton as RetryFailedButton_031708e5ec0d440fa0e875685fe3be7e } from '../../../components/RetryFailedButton'
 import { LiveRateReference as LiveRateReference_cf58a7bf50799797837960e85affcbc9 } from '../../../components/LiveRateReference'
 import { LinkedRateField as LinkedRateField_5e644179658fd8d01801e2c73468bfb1 } from '../../../components/LinkedRateField'
@@ -26,7 +26,7 @@ export const importMap = {
   "/components/DynamicAmountLabel#ProfitLabel": ProfitLabel_6aa801537ec68bf01e73927a12b8b816,
   "/components/ProfitPercentageCell#ProfitPercentageCell": ProfitPercentageCell_9b47ee4405832f5d2df818bac20940d1,
   "/components/TransactionSummaryBanner#TransactionSummaryBanner": TransactionSummaryBanner_09c9eb81b144cbf42883de02be793b86,
-  "/components/TransactiontypeFilter#TransactionTypeFilter": TransactionTypeFilter_c4d671a01597447a98ffe87713e9e6d5,
+  "/components/TransactionTypeFilter#TransactionTypeFilter": TransactionTypeFilter_5eb21d65400f488ce5d607df928218d8,
   "/components/RetryFailedButton#RetryFailedButton": RetryFailedButton_031708e5ec0d440fa0e875685fe3be7e,
   "/components/LiveRateReference#LiveRateReference": LiveRateReference_cf58a7bf50799797837960e85affcbc9,
   "/components/LinkedRateField#LinkedRateField": LinkedRateField_5e644179658fd8d01801e2c73468bfb1,

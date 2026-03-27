@@ -58,7 +58,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "transactions_sending_record_idx" ON "transactions" USING btree ("sending_record_id");
   CREATE INDEX "payload_locked_documents_rels_received_id_idx" ON "payload_locked_documents_rels" USING btree ("received_id");
   CREATE INDEX "payload_locked_documents_rels_sending_id_idx" ON "payload_locked_documents_rels" USING btree ("sending_id");
-  ALTER TABLE "exchange_rates" DROP COLUMN "_lastedited";`)
+  ALTER TABLE "exchange_rates" DROP COLUMN IF EXISTS "_lastedited";`)
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
