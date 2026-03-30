@@ -1,0 +1,117 @@
+---
+title: Treasury Wallets
+description: How to create and manage treasury (system) crypto wallets used for USDT transfers.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+# 🏦 Treasury Wallets
+
+<Badge text="Admin Only" variant="danger" />
+
+The **Treasury** collection stores your platform's system wallets — the crypto wallets used to send USDT to users (for Fiat → Crypto) or receive USDT from users (for Crypto → Fiat).
+
+---
+
+## What is a Treasury Wallet?
+
+A treasury wallet is a **system-owned crypto wallet** on a specific blockchain network. When processing transactions, the platform uses treasury wallets to:
+
+- **Send USDT** to users who paid PHP (Fiat → Crypto)
+- **Track received USDT** from users who want PHP (Crypto → Fiat)
+
+Each treasury wallet is linked to a specific **Network** (e.g., Tron/TRC20, BEP20).
+
+---
+
+## Wallet Fields
+
+| Field                    | Description                                                              |
+| ------------------------ | ------------------------------------------------------------------------ |
+| **Wallet Name**          | A friendly identifier (e.g., `Main USDT Wallet`)                        |
+| **Wallet Address**       | The public blockchain address                                            |
+| **Private Key**          | The wallet's private key — encrypted at rest, masked in the UI          |
+| **Network**              | Linked blockchain network (select from Networks collection)              |
+| **Current Balance**      | Manually trackable USDT balance for monitoring                           |
+| **Latest Transaction At**| Timestamp of the last activity on this wallet                           |
+
+---
+
+## How to Add a Treasury Wallet
+
+<Steps>
+1. Go to **Wallets > Treasury** in the sidebar (visible to admins only).
+2. Click **Create New**.
+3. Fill in the fields:
+   - **Wallet Name** — Give it a descriptive name like `Tron Main Wallet`.
+   - **Wallet Address** — Paste the public wallet address.
+   - **Private Key** — Paste the raw private key. It will be **encrypted automatically** upon save.
+   - **Network** — Select the blockchain network this wallet lives on.
+   - **Current Balance** — Optionally enter the current USDT balance.
+4. Click **Save**.
+</Steps>
+
+:::danger
+The **private key** is extremely sensitive. Once saved, it is encrypted and can never be viewed in plaintext again through the admin panel — it will always show `••••••••`. Store a backup of the private key in a secure location (e.g., a password manager) **before** entering it.
+:::
+
+---
+
+## Private Key Security
+
+The system applies two layers of protection to private keys:
+
+1. **Encryption at rest** — Before saving to the database, the private key is encrypted using AES encryption (prefixed with `enc:`).
+2. **Masked in UI / API responses** — Whenever a treasury record is read, the private key is replaced with `••••••••` so it is never exposed again in the admin panel or API.
+
+:::caution
+Internal background processes (e.g., the collector worker) can bypass the mask when needed by using `context.skipPrivateKeyMask = true` in their API calls. This is intentional and secure — it is not accessible from the frontend.
+:::
+
+---
+
+## How to Update a Wallet's Balance
+
+<Steps>
+1. Open the treasury wallet record.
+2. Update the **Current Balance** field with the current USDT amount.
+3. Optionally update **Latest Transaction At** to reflect recent activity.
+4. Click **Save**.
+</Steps>
+
+:::tip
+Balance tracking in the admin panel is **manual**. For real-time balances, check the actual blockchain explorer for the wallet address.
+:::
+
+---
+
+## Linking a Treasury to a Transaction
+
+When creating a **Transaction**, you must select a **Treasury Wallet**:
+
+1. Open a new or existing transaction.
+2. In the **Treasury Wallet** field, select from your configured wallets.
+3. The system uses this wallet to source or track the USDT transfer.
+
+---
+
+## Deposit Address API
+
+Each treasury wallet has an endpoint to get its deposit address:
+
+```
+GET /api/treasury/:id/deposit-address
+```
+
+This can be used by user-facing applications to show where users should send their USDT.
+
+---
+
+## Access Control Summary
+
+| Action   | Admin | User |
+| -------- | ----- | ---- |
+| View     | ✅    | ❌   |
+| Create   | ✅    | ❌   |
+| Update   | ✅    | ❌   |
+| Delete   | ✅    | ❌   |

@@ -1,0 +1,149 @@
+---
+title: Transactions
+description: Complete guide to creating and managing exchange transactions in the Exchanger admin panel.
+---
+
+import { Steps, Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+# 💱 Transactions
+
+<Badge text="Admin + User" variant="note" />
+
+The **Transactions** collection is the core of the Exchanger platform. It records every exchange between Philippine Pesos (PHP) and USDT (Tether stablecoin), in both directions.
+
+---
+
+## Transaction Types
+
+There are two types of transactions:
+
+| Type              | Direction                 | User Sends | User Receives |
+| ----------------- | ------------------------- | ---------- | ------------- |
+| `fiat_to_crypto`  | Fiat → Crypto             | PHP        | USDT          |
+| `crypto_to_fiat`  | Crypto → Fiat             | USDT       | PHP           |
+
+---
+
+## Transaction Statuses
+
+A transaction goes through a lifecycle tracked by the **Status** field:
+
+| Status          | Meaning                                              |
+| --------------- | ---------------------------------------------------- |
+| `pending`       | Just created, waiting for action                     |
+| `confirmed`     | Payment received or confirmed                        |
+| `processing`    | Being processed (e.g., sending funds)                |
+| `completed`     | Fully settled on both sides                          |
+| `refunded`      | Transaction reversed/refunded                        |
+| `review_needed` | Flagged for manual review due to an issue            |
+
+---
+
+## How to Create a Transaction (Admin)
+
+<Steps>
+1. Go to **Operations > Transactions** in the sidebar.
+2. Click **Create New**.
+3. Fill in the required fields:
+
+   **Step 1 — Type & Status**
+   - **Transaction Type** — Select `Fiat to Crypto` or `Crypto to Fiat`.
+   - **Status** — Leave as `Pending` for new transactions.
+
+   **Step 2 — Wallets & Network**
+   - **Treasury Wallet** — Pick the system wallet to use for sending funds.
+   - **Network** — Select the blockchain network (e.g., Tron, BEP20).
+
+   **Step 3 — Amount & Destination**
+   - **Total Received (₱/USDT)** — Enter the amount the user is sending.
+     - For `Fiat → Crypto`: Enter PHP amount.
+     - For `Crypto → Fiat`: Enter USDT amount.
+   - **Target Address** *(Fiat → Crypto only)* — Enter the user's crypto wallet address.
+   - **Bank Details** *(Crypto → Fiat only)* — Enter the user's bank name, account number, and account name.
+
+   **Step 4 — Exchange Rate**
+   - **Exchange Rate** — Select the active rate. The system will auto-calculate the output amount and profit.
+
+4. Click **Save** to create the transaction.
+</Steps>
+
+:::note
+Once you save, the system automatically creates **Received** and **Sending** records linked to this transaction. You don't need to create them manually.
+:::
+
+---
+
+## Auto-Calculations (Admin View)
+
+When you select an Exchange Rate and enter an amount, the following fields are **automatically calculated**:
+
+| Field                              | Description                                          |
+| ---------------------------------- | ---------------------------------------------------- |
+| **Calculated Amount (Original Rate)** | What the user would get at the market reference rate |
+| **Total Amount Sent (USDT/₱)**    | The actual amount sent after markup                  |
+| **Profit (USDT or PHP)**          | The difference — your platform's earnings             |
+
+:::tip
+Admin users can use the **Exchange Rate Calculator** widget on the transaction form to preview amounts before saving.
+:::
+
+---
+
+## Admin-Only Fields
+
+The following fields are **only visible to admins**:
+
+| Field                         | Description                                     |
+| ----------------------------- | ----------------------------------------------- |
+| Calculated Amount (Original)  | Amount at reference/market rate                 |
+| Exchange Rate                 | Which rate config was applied                   |
+| Profit                        | Platform earnings per transaction               |
+| Profit Percentage (column)    | Profit as a % of the transaction value          |
+| Exchange Rate Calculator      | Interactive widget to preview calculated values |
+
+---
+
+## Understanding the Transaction Summary Banner
+
+At the top of the Transactions list, admins see a **Summary Banner** that displays:
+
+- **Total USDT Volume** — Total USDT across filtered transactions
+- **Total PHP Volume** — Total PHP across filtered transactions
+- **Total Profit USDT** — Cumulative USDT profit
+- **Total Profit PHP** — Cumulative PHP profit
+
+You can filter the banner data using the **Transaction Type Filter** (Fiat → Crypto / Crypto → Fiat / All).
+
+---
+
+## Updating a Transaction's Status
+
+<Steps>
+1. Open the transaction from the list.
+2. Change the **Status** dropdown to the new status.
+3. If status is `review_needed` or `refunded`, a **Failure Reason** field appears — fill it in.
+4. Add a **Transaction Hash** (`txHash`) once the on-chain transfer is done.
+5. Click **Save**.
+</Steps>
+
+---
+
+## Linked Records (Sidebar)
+
+When a transaction is saved, two linked records appear in the sidebar:
+
+- **Received Record** — The incoming payment details.
+- **Sending Record** — The outgoing payment details.
+
+These are read-only from the transaction form. To update them directly, go to the **Received** or **Sending** collections.
+
+---
+
+## Access Control Summary
+
+| Action   | Admin | User |
+| -------- | ----- | ---- |
+| Read     | ✅    | ✅   |
+| Create   | ✅    | ❌   |
+| Update   | ✅    | ❌   |
+| Delete   | ✅    | ❌   |

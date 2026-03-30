@@ -1,0 +1,150 @@
+---
+title: Received & Sending Records
+description: How the Received and Sending collections work to track individual payment legs of each transaction.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+# 📦 Received & Sending Records
+
+<Badge text="Admin Only" variant="danger" />
+
+Every **Transaction** automatically creates two child records:
+
+- A **Received** record — tracking the incoming payment (what the platform received)
+- A **Sending** record — tracking the outgoing payment (what the platform sends to the user)
+
+These collections provide granular, per-payment tracking for reconciliation and auditing.
+
+---
+
+## How They Are Created
+
+Received and Sending records are **automatically created** when an admin saves a new Transaction. You do not need to create them manually.
+
+```
+Transaction created
+  → Received record created (auto)
+  → Sending record created (auto)
+  → Transaction updated with references to both records
+```
+
+When a transaction is **updated**, both the Received and Sending records are also updated to stay in sync.
+
+---
+
+## Received Collection
+
+The **Received** collection records what the platform has received from the customer.
+
+### Fields
+
+| Field               | Description                                                            |
+| ------------------- | ---------------------------------------------------------------------- |
+| **Amount**          | The amount received (precision: 2 decimal for PHP, 6 for USDT)        |
+| **Currency**        | `PHP` or `USDT`                                                        |
+| **Transaction**     | Link to the parent Transaction                                         |
+| **Status**          | `pending` or `confirmed`                                              |
+| **Method**          | `bank_transfer` or `crypto`                                            |
+| **Reference Number**| *(Bank transfers only)* — Bank reference/confirmation number          |
+| **Sender Address**  | *(Crypto only)* — Blockchain address that sent USDT                   |
+| **Tx Hash**         | *(Crypto only)* — On-chain transaction hash of the received payment   |
+
+### Received Status by Transaction Type
+
+| Transaction Type  | Received Currency | Received Method  | Received Status |
+| ----------------- | ----------------- | ---------------- | --------------- |
+| Fiat → Crypto     | USDT              | crypto           | confirmed       |
+| Crypto → Fiat     | PHP               | bank_transfer    | confirmed       |
+
+---
+
+## Sending Collection
+
+The **Sending** collection records what the platform sends out to the customer.
+
+### Fields
+
+| Field                | Description                                                          |
+| -------------------- | -------------------------------------------------------------------- |
+| **Amount**           | The amount to send (precision: 2 decimal for PHP, 6 for USDT)       |
+| **Currency**         | `PHP` or `USDT`                                                      |
+| **Transaction**      | Link to the parent Transaction                                       |
+| **Status**           | `pending`, `processing`, `completed`, or `failed`                   |
+| **Method**           | `bank_transfer` or `crypto`                                          |
+| **Tx Hash**          | *(Crypto only)* — On-chain transaction hash of the outgoing transfer |
+| **Receiver Details** | Additional receiver info (e.g., bank name, account number)           |
+
+### Sending Status by Transaction Type
+
+| Transaction Type  | Sending Currency | Sending Method  | Initial Status |
+| ----------------- | ---------------- | --------------- | -------------- |
+| Fiat → Crypto     | USDT             | crypto          | pending        |
+| Crypto → Fiat     | PHP              | bank_transfer   | pending        |
+
+---
+
+## How to Update a Sending Record (Admin)
+
+When a transfer has been sent, update the Sending record to reflect it:
+
+<Steps>
+1. Go to **Operations > Sending** (or click the **Sending Record** link from inside the Transaction sidebar).
+2. Open the relevant sending record.
+3. Update **Status** to `processing` or `completed`.
+4. If it was a crypto transfer, add the **Tx Hash**.
+5. Click **Save**.
+</Steps>
+
+---
+
+## How to Update a Received Record (Admin)
+
+If you need to log a bank reference number or sender address for auditing:
+
+<Steps>
+1. Go to **Operations > Received** (or click the **Received Record** link from inside the Transaction sidebar).
+2. Open the relevant received record.
+3. Update **Status** to `confirmed` if payment was verified.
+4. Add a **Reference Number** (for bank transfers) or **Sender Address / Tx Hash** (for crypto).
+5. Click **Save**.
+</Steps>
+
+---
+
+## Sidebar Quick Links
+
+From inside any **Transaction** record, the sidebar shows:
+
+- **Received Record** — Click to go directly to the Received record.
+- **Sending Record** — Click to go directly to the Sending record.
+
+These fields are **read-only** in the transaction view and are only shown after the transaction has been saved (i.e., they have an ID).
+
+---
+
+## Precision Rules
+
+Currency amounts are automatically rounded according to these rules when saved:
+
+| Currency | Precision       | Example       |
+| -------- | --------------- | ------------- |
+| PHP      | 2 decimal places | `1234.56`    |
+| USDT     | 6 decimal places | `10.500000`  |
+
+---
+
+## Access Control Summary
+
+Both **Received** and **Sending** collections follow the same access rules:
+
+| Action   | Admin | User |
+| -------- | ----- | ---- |
+| Read     | ✅    | ✅ (public) |
+| Create   | ✅    | ❌   |
+| Update   | ✅    | ❌   |
+| Delete   | ✅    | ❌   |
+
+:::note
+While read access is currently open (`read: () => true`), all write operations are admin-only. Records should only be created and modified by the system or by admins.
+:::

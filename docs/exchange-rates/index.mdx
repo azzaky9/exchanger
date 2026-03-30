@@ -1,0 +1,142 @@
+---
+title: Exchange Rates
+description: How to create and manage USDT/PHP exchange rates with markup percentages in the Exchanger admin panel.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+# 💱 Exchange Rates
+
+<Badge text="Admin Only" variant="danger" />
+
+The **Exchange Rates** collection lets you configure the buy and sell rates for USDT/PHP. Admins can set a reference (market) rate and apply custom markup percentages to control platform margins.
+
+---
+
+## Key Concepts
+
+| Term                       | Meaning                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| **Reference Rate**         | The live market rate: 1 USDT = ? PHP (e.g., 58.50)           |
+| **USDT → PHP Rate**        | Rate applied when users sell USDT and receive PHP              |
+| **PHP → USDT Rate**        | Rate applied when users sell PHP and receive USDT              |
+| **Markup Percentage**      | How much % below market rate you give to users (your margin)   |
+| **Currency Pair**          | Fixed at `USDT/PHP` — you cannot change this                  |
+
+### How Markup Works
+
+The platform earns by giving users a **slightly worse rate** than the market:
+
+- **USDT → PHP**: User gets fewer PHP than the market rate offers → platform keeps the difference.
+- **PHP → USDT**: User gets fewer USDT than the market implies → platform keeps the difference.
+
+---
+
+## Live Rate Reference
+
+At the top of the Exchange Rate form, a **Live Rate Reference** widget displays the current market rate fetched from an external API. Use this as a guide when setting your reference rate.
+
+---
+
+## How to Create an Exchange Rate
+
+<Steps>
+1. Go to **Exchange Rates** in the sidebar (visible to admins only).
+2. Click **Create New**.   
+3. The **Currency Pair** is pre-filled as `USDT/PHP` and is read-only.
+4. Set the **Reference Rate** — enter the current market rate (e.g., `58.50`).
+5. Use the **USDT → PHP Rate Editor**:
+   - Enter the **USDT → PHP Rate** directly, **or**
+   - Enter the **Markup Percentage** and the rate will be calculated automatically.
+6. Use the **PHP → USDT Rate Editor**:
+   - Enter the **PHP → USDT Rate** directly, **or**
+   - Enter the **Markup Percentage** and the rate will be calculated automatically.
+7. Check the **Active** checkbox to make this rate selectable in transactions.
+8. Click **Save**.
+</Steps>
+
+:::note
+Only one exchange rate record is expected (the system uses a single `USDT/PHP` pair marked as active). Creating multiple rates is supported, but only one should be active and linked to transactions at a time.
+:::
+
+---
+
+## How to Update an Existing Rate
+
+<Steps>
+1. Go to **Exchange Rates** in the sidebar.
+2. Click on the existing `USDT/PHP` rate record.
+3. Update the **Reference Rate** to reflect the current market price.
+4. Adjust **markups** if needed — the linked rate fields update automatically.
+5. Click **Save**.
+</Steps>
+
+:::tip
+You can edit either the **rate** or the **percentage** in the linked editor — the other field auto-calculates. This lets you work in whatever way feels natural.
+:::
+
+---
+
+## Understanding the Linked Rate Field
+
+The custom **Linked Rate Field** component shows two editable boxes side by side:
+
+```
+[ Rate: 57.25 ]    [ Markup: 2.14% ]
+```
+
+- Change the **rate** → percentage recalculates.
+- Change the **percentage** → rate recalculates.
+- Both are based on the **Reference Rate** you entered.
+
+This works independently for:
+- The `USDT → PHP` side
+- The `PHP → USDT` side
+
+---
+
+## Rate Calculation Formulas
+
+### USDT → PHP (Selling USDT)
+
+```
+Applied Rate = Reference Rate × (1 - markup% / 100)
+```
+
+Example: Reference = 58.50, Markup = 2%
+→ Applied Rate = 58.50 × 0.98 = **57.33 PHP per USDT**
+
+---
+
+### PHP → USDT (Buying USDT)
+
+```
+Base Rate = 1 / Reference Rate
+Applied Rate = Base Rate × (1 - markup% / 100)
+```
+
+Example: Reference = 58.50
+→ Base Rate = 0.01709401 USDT/PHP
+→ Markup 2%: Applied Rate = 0.01709401 × 0.98 = **0.01675213 USDT/PHP**
+
+---
+
+## Activating / Deactivating a Rate
+
+- **Active** checkbox controls whether the rate appears in transaction dropdowns.
+- Uncheck **Active** to retire an old rate without deleting it.
+
+---
+
+## Access Control Summary
+
+| Action   | Admin | User |
+| -------- | ----- | ---- |
+| View     | ✅    | ❌   |
+| Create   | ✅    | ❌   |
+| Update   | ✅    | ❌   |
+| Delete   | ✅    | ❌   |
+
+:::note
+While the Exchange Rates data can be publicly read via API (for display purposes on user-facing apps), all create/update/delete operations are admin-only.
+:::

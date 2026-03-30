@@ -1,0 +1,103 @@
+---
+title: Batches
+description: Understanding and managing batch processing records for USDT transfers. Admin only.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+# 📦 Batches
+
+<Badge text="Admin Only" variant="danger" />
+
+The **Batches** collection is an internal system feature that groups multiple transactions together for bulk USDT transfers. It is primarily managed by the automated background system, but admins can view batch details and retry failed batches.
+
+:::note
+The Batches menu item is **hidden** from the admin sidebar by default. Access is only available directly via URL or programmatically through the API.
+:::
+
+---
+
+## What is a Batch?
+
+When multiple pending Fiat → Crypto transactions are ready to process, the system may group them into a single **Batch** for efficiency. A batch tracks:
+
+- How many transactions were included
+- Total USDT amounts (gross, net, fees)
+- How many succeeded or failed
+- The overall status of the batch run
+
+---
+
+## Batch Fields
+
+| Field                  | Description                                                |
+| ---------------------- | ---------------------------------------------------------- |
+| **Transaction Count**  | Total number of transactions included in this batch       |
+| **Total USDT (Gross)** | Total USDT before fees                                     |
+| **Total Fees (USDT)**  | Total exchange fees collected across batch transactions    |
+| **Total Net USDT**     | Total USDT sent to users after fees                        |
+| **Successful Transfers** | Count of transactions that transferred successfully      |
+| **Failed Transfers**   | Count of transactions that failed during transfer          |
+| **Status**             | Current batch status (see table below)                     |
+| **Executed At**        | Timestamp when the batch was run                           |
+| **Transactions**       | List of all transactions linked to this batch              |
+
+---
+
+## Batch Statuses
+
+| Status            | Meaning                                                    |
+| ----------------- | ---------------------------------------------------------- |
+| `processing`      | Batch is currently being executed                          |
+| `partial_success` | Some transactions succeeded, some failed                   |
+| `success`         | All transactions in the batch completed successfully       |
+| `failed`          | All or most transactions failed                            |
+
+---
+
+## How to Retry a Failed Batch
+
+If a batch has a status of `partial_success` or `failed`, a **Retry Failed** button appears at the top of the batch record:
+
+<Steps>
+1. Navigate to the batch record (via the API or direct URL).
+2. Check that the **Status** is `partial_success` or `failed`.
+3. Click the **Retry Failed** button that appears at the top of the form.
+4. The system will re-attempt all failed transactions in the batch.
+5. Refresh the page to see the updated status and counts.
+</Steps>
+
+:::caution
+Retrying a batch will attempt to re-send USDT for all **failed** transactions within it. Make sure the treasury wallet has sufficient funds before retrying.
+:::
+
+---
+
+## Viewing Transactions in a Batch
+
+Each batch record includes a **Transactions** join field at the bottom of the form, showing all linked transaction records.
+
+You can click through to any individual transaction to view its details or update its status manually.
+
+---
+
+## Batch API
+
+The system uses a dedicated endpoint to retry failed batches:
+
+```
+POST /api/batches/:id/retry
+```
+
+This endpoint is also called by the **Retry Failed** button in the UI and is restricted to admin users.
+
+---
+
+## Access Control Summary
+
+| Action   | Admin | User |
+| -------- | ----- | ---- |
+| View     | ✅    | ❌   |
+| Create   | ✅    | ❌   |
+| Update   | ✅    | ❌   |
+| Delete   | ✅    | ❌   |

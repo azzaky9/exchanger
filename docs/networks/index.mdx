@@ -1,0 +1,126 @@
+---
+title: Networks
+description: How to configure blockchain networks for USDT transfers in the Exchanger admin panel.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+# 🌐 Networks
+
+<Badge text="Admin Only" variant="danger" />
+
+The **Networks** collection defines the blockchain networks your platform supports for USDT transfers. Each treasury wallet and transaction must be linked to a network.
+
+---
+
+## What is a Network?
+
+A network represents a **blockchain** that your platform can interact with. Common examples include:
+
+| Network Name | Symbol  | Type     | Gas Token |
+| ------------ | ------- | -------- | --------- |
+| Tron         | `trx`   | Mainnet  | TRX       |
+| BEP20 (BSC)  | `bep20` | Mainnet  | BNB       |
+| Ethereum     | `eth`   | Mainnet  | ETH       |
+| Polygon      | `polygon`| Mainnet | MATIC     |
+
+---
+
+## Network Fields
+
+| Field                   | Description                                                                 |
+| ----------------------- | --------------------------------------------------------------------------- |
+| **Network Name**        | Full name of the chain (e.g., `Tron`, `BEP20`)                             |
+| **Symbol**              | Short identifier (e.g., `trx`, `bep20`, `eth`)                             |
+| **Network Type**        | `Mainnet` or `Testnet`                                                      |
+| **RPC URL**             | The JSON-RPC endpoint for interacting with this blockchain                  |
+| **USDT Contract Address**| The USDT token smart contract address on this specific network            |
+| **USDT Decimals**       | Number of decimals for USDT on this chain (usually `6` for Tron/Ethereum, `18` for BSC) |
+| **Gas Fee Token Name**  | Name of the native token used for gas fees (e.g., `TRX`, `BNB`, `ETH`)    |
+| **Is Active**           | Whether this network is currently available for use in transactions         |
+
+---
+
+## How to Add a New Network
+
+<Steps>
+1. Go to **Settings > Networks** in the sidebar.
+2. Click **Create New**.
+3. Fill in all required fields:
+   - **Network Name** — e.g., `Tron`
+   - **Symbol** — e.g., `trx`
+   - **Network Type** — Select `Mainnet` or `Testnet`
+   - **RPC URL** — e.g., `https://api.trongrid.io`
+   - **USDT Contract Address** — e.g., `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t` (Tron USDT)
+   - **USDT Decimals** — e.g., `6`
+   - **Gas Fee Token Name** — e.g., `TRX`
+4. Make sure **Is Active** is checked.
+5. Click **Save**.
+</Steps>
+
+---
+
+## How to Deactivate a Network
+
+<Steps>
+1. Open the network record you want to disable.
+2. Uncheck **Is Active**.
+3. Click **Save**.
+</Steps>
+
+Once deactivated, the network will **no longer appear** in the transaction or treasury wallet dropdowns.
+
+:::caution
+Deactivating a network does **not** affect existing transactions or wallets already linked to it. It only prevents new records from using it.
+:::
+
+---
+
+## Common USDT Contract Addresses
+
+Here are the official USDT contract addresses for the most common networks:
+
+| Network      | USDT Contract Address                            | Decimals |
+| ------------ | ------------------------------------------------ | -------- |
+| Tron (TRC20) | `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`           | 6        |
+| Ethereum     | `0xdAC17F958D2ee523a2206206994597C13D831ec7`     | 6        |
+| BEP20 (BSC)  | `0x55d398326f99059fF775485246999027B3197955`     | 18       |
+| Polygon      | `0xc2132D05D31c914a87C6611C10748AEb04B58e8F`     | 6        |
+
+:::tip
+Always verify contract addresses from official sources before adding them to the admin panel.
+:::
+
+---
+
+## RPC URL Examples
+
+| Network     | Example RPC URL                                 |
+| ----------- | ----------------------------------------------- |
+| Tron        | `https://api.trongrid.io`                       |
+| BSC Mainnet | `https://bsc-dataseed.binance.org`              |
+| Ethereum    | `https://mainnet.infura.io/v3/<YOUR_KEY>`       |
+| Polygon     | `https://polygon-rpc.com`                       |
+
+---
+
+## Available Networks API
+
+The platform exposes a public endpoint to retrieve active networks:
+
+```
+GET /api/networks/available
+```
+
+This is used by user-facing apps to show which networks are currently supported.
+
+---
+
+## Access Control Summary
+
+| Action   | Admin | User |
+| -------- | ----- | ---- |
+| View     | ✅    | ❌   |
+| Create   | ✅    | ❌   |
+| Update   | ✅    | ❌   |
+| Delete   | ✅    | ❌   |

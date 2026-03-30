@@ -1,0 +1,142 @@
+---
+title: Finance Dashboard
+description: A complete guide to using the Finance Dashboard — an admin-only analytics view for monitoring profits, volumes, and transactions.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+# 📊 Finance Dashboard
+
+<Badge text="Admin Only" variant="danger" />
+
+The **Finance Dashboard** is a custom admin-only view that gives you a bird's-eye view of your exchange platform's financial performance, including profits, volumes, and recent transaction activity.
+
+---
+
+## How to Access the Finance Dashboard
+
+<Steps>
+1. Log in with an **admin** account.
+2. In the left sidebar, look for the **Finance** link (shown only to admins).
+3. Click **Finance** to open the dashboard at `/admin/finance`.
+</Steps>
+
+:::note
+If you don't see the **Finance** link in the sidebar, you are not logged in as an admin.
+:::
+
+---
+
+## Dashboard Overview
+
+The Finance Dashboard is divided into three main sections:
+
+### 1. KPI Cards
+
+At the top, six KPI (Key Performance Indicator) cards provide a quick summary:
+
+| Card                | Description                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| **Profit (USDT)**   | Total USDT earned from Fiat → Crypto transactions             |
+| **Profit (PHP)**    | Total PHP earned from Crypto → Fiat transactions              |
+| **Volume PHP**      | Total PHP handled across all transactions                    |
+| **Volume USDT**     | Total USDT handled across all transactions                   |
+| **Completed**       | Number of completed transactions out of total                |
+| **In Progress**     | Number of pending transactions + pending sent PHP/USDT amounts |
+
+---
+
+### 2. Daily Profit Bar Chart
+
+Below the KPI cards, a **bar chart** visualizes daily profit over the selected time range:
+
+- 🟢 **Green bars** — USDT profit (from Fiat → Crypto)
+- 🔵 **Blue bars** — PHP profit (from Crypto → Fiat)
+- Hover over a bar to see exact values.
+
+---
+
+### 3. Recent Transactions Table
+
+A table showing the most recent transactions with:
+
+| Column      | Description                                         |
+| ----------- | --------------------------------------------------- |
+| Order ID    | Short unique order identifier                       |
+| Type        | `Fiat→Crypto` or `Crypto→Fiat` (color-coded badge)  |
+| Status      | Current status (color-coded)                        |
+| Received    | Amount received by the platform                     |
+| Sent        | Amount sent to the user                             |
+| Profit      | Platform profit for this transaction (green/red)    |
+| Created     | Date the transaction was created                    |
+
+---
+
+## Filtering Data
+
+Use the **Filter Bar** at the top of the dashboard to control what data is shown:
+
+### Time Range Presets
+
+| Button        | What It Shows                        |
+| ------------- | ------------------------------------ |
+| **Today**     | Transactions from today only         |
+| **This Week** | Transactions from the current week   |
+| **This Month**| Transactions from the current month  |
+| **This Year** | Transactions from the current year   |
+| **All Time**  | All transactions ever                |
+
+### Custom Date Range
+
+<Steps>
+1. Set a **From** date using the date picker.
+2. Set a **To** date using the date picker.
+3. Click **Apply** to load data for that custom range.
+</Steps>
+
+### Transaction Type Filter
+
+Use the **Type** dropdown to narrow data to:
+- `All Types`
+- `Fiat → Crypto` only
+- `Crypto → Fiat` only
+
+### Status Filter
+
+Use the **Status** dropdown to filter by:
+- `All Statuses`
+- `Pending`
+- `Confirmed`
+- `Processing`
+- `Completed`
+- `Refunded`
+- `Review Needed`
+
+---
+
+## How to Read Profit Numbers
+
+| Transaction Type  | "Received" column     | "Sent" column      | "Profit"             |
+| ----------------- | --------------------- | ------------------- | -------------------- |
+| Fiat → Crypto     | ₱ (PHP from user)     | USDT (to user)      | USDT profit          |
+| Crypto → Fiat     | USDT (from user)      | ₱ (PHP to user)     | PHP profit           |
+
+Profit is calculated as:
+
+> **Profit = Amount at reference/market rate − Amount actually sent to user**
+
+The platform earns by applying a **markup percentage** to the exchange rate.
+
+---
+
+## Navigating Back
+
+Click the **← Back** button at the top left of the Finance Dashboard to return to the main admin panel.
+
+---
+
+## Access Control
+
+The Finance Dashboard is **entirely restricted to admins**:
+- The Finance link in the navigation sidebar is hidden from non-admin users.
+- All API endpoints that supply dashboard data enforce admin-only access.

@@ -1,0 +1,108 @@
+---
+title: User Management
+description: How to create, view, and manage users in the Exchanger admin panel. Admin only.
+---
+
+import { Steps, Aside, Badge } from '@astrojs/starlight/components';
+
+# 👤 User Management
+
+<Badge text="Admin Only" variant="danger" />
+
+The **Users** collection lets you manage all accounts on the platform. Only admins can see and modify user records.
+
+---
+
+## Roles
+
+Every user has one or more of the following roles:
+
+| Role    | Description                                                        |
+| ------- | ------------------------------------------------------------------ |
+| `admin` | Full access to all collections, finance dashboard, and settings.   |
+| `user`  | Limited access — can only view their own transactions and records. |
+
+:::caution
+Only admins can change another user's role. Be careful when assigning `admin` to prevent unauthorized access.
+:::
+
+---
+
+## How to View All Users
+
+<Steps>
+1. Log in with an **admin** account.
+2. In the left sidebar, click **Users** (visible only to admins).
+3. You will see a list of all registered users with their email addresses.
+</Steps>
+
+---
+
+## How to Create a New User
+
+<Steps>
+1. Go to **Users** in the sidebar.
+2. Click the **Create New** button (top right).
+3. Fill in the required fields:
+   - **Email** — Must be a valid, unique email address.
+   - **Password** — A strong password for the user.
+   - **Roles** — Choose `admin` or `user` (defaults to `user`).
+4. Click **Save** to create the user.
+</Steps>
+
+:::note
+New users are assigned the `user` role by default. Only an admin can later promote them to `admin`.
+:::
+
+---
+
+## How to Edit a User's Role
+
+<Steps>
+1. Go to **Users** in the sidebar.
+2. Click on the user you want to edit.
+3. Find the **Roles** field.
+4. Select `admin` or `user` (or both).
+5. Click **Save**.
+</Steps>
+
+:::caution
+The **Roles** field can only be edited by an admin. Regular users cannot change their own roles.
+:::
+
+---
+
+## How to Delete a User
+
+<Steps>
+1. Go to **Users** in the sidebar.
+2. Find the user you want to delete.
+3. Click on the row to open the user record.
+4. Click the **Delete** button (usually found in the document toolbar or sidebar).
+5. Confirm the deletion.
+</Steps>
+
+:::danger
+Deleting a user is permanent and cannot be undone. Make sure the user has no critical pending transactions before deleting.
+:::
+
+---
+
+## API Key Authentication
+
+Each user account supports **API key authentication** (`useAPIKey: true`). This is useful for programmatic integrations:
+
+- API keys are auto-generated per user.
+- Pass the key via the `Authorization: users API-Key <your-key>` header in HTTP requests.
+- Only admins can see and manage API keys.
+
+---
+
+## Access Control Summary
+
+| Action   | Admin | User (Self) | User (Others) |
+| -------- | ----- | ----------- | ------------- |
+| Read all | ✅    | ❌          | ❌            |
+| Create   | ✅    | ❌          | ❌            |
+| Update   | ✅    | ✅ (own)    | ❌            |
+| Delete   | ✅    | ❌          | ❌            |

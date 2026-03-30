@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import crypto from 'node:crypto'
 import { createExchangeEndpoint } from '../endpoints/createExchange'
+import { createExchangeBatchEndpoint } from '../endpoints/createExchangeBatch'
 import { checkSettlementEndpoint } from '../endpoints/checkSettlement'
 import { settlementStatusEndpoint } from '../endpoints/settlementStatus'
 import { financeSummaryEndpoint } from '../endpoints/finance-summary'
@@ -9,6 +10,7 @@ export const Transaction: CollectionConfig = {
   slug: 'transactions',
   endpoints: [
     createExchangeEndpoint,
+    createExchangeBatchEndpoint,
     checkSettlementEndpoint,
     settlementStatusEndpoint,
     financeSummaryEndpoint,
