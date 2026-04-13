@@ -24,14 +24,10 @@ export const getExchangeRatePublic: Endpoint = {
   path: '/current',
   method: 'get',
   handler: async (req) => {
-    if (!req.user) {
-      throw new APIError('Unauthorized', 401)
-    }
-
     const { payload } = req
 
     try {
-      const exchangeRate = await payload.find({
+      let exchangeRate = await payload.find({
         collection: 'exchange-rates',
         where: {
           isActive: {
@@ -47,6 +43,22 @@ export const getExchangeRatePublic: Endpoint = {
         limit: 1,
         sort: '-updatedAt',
       })
+
+      // Fallback to most recent row if no active row exists.
+      if (!exchangeRate.docs?.length) {
+        exchangeRate = await payload.find({
+          collection: 'exchange-rates',
+          select: {
+            phpToUsdtRate: true,
+            usdtToPhpRate: true,
+            updatedAt: true,
+          },
+          depth: 0,
+          limit: 1,
+          sort: '-updatedAt',
+        })
+      }
+
       const docs = exchangeRate.docs || []
       const rate = docs.length > 0 ? (docs[0] as ExchangeRate) : null
 
