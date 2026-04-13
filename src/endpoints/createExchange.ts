@@ -13,7 +13,7 @@ import { APIError } from 'payload'
  *   - amount: number (required — amount in the source currency: PHP for fiat_to_crypto, USDT for crypto_to_fiat)
  *   - network: number (network ID, required)
  *   - targetAddress: string (destination wallet, required for fiat_to_crypto)
- *   - bankDetails: string (bank account details, required for crypto_to_fiat)
+ *   - bankDetails: not required from client for crypto_to_fiat (loaded from BANK_ACCOUNT_NAME and BANK_ACCOUNT_NUMBER env vars)
  *
  * Returns the created transaction.
  */
@@ -28,12 +28,11 @@ export const createExchangeEndpoint: Endpoint = {
     const body =
       typeof req.json === 'function' ? await req.json() : (req as unknown as { body: unknown }).body
 
-    const { type, amount, network, targetAddress, bankDetails } = body as {
+    const { type, amount, network, targetAddress } = body as {
       type?: string
       amount?: number
       network?: number
       targetAddress?: string
-      bankDetails?: string
     }
 
     const validTypes = ['fiat_to_crypto', 'crypto_to_fiat'] as const
@@ -53,11 +52,36 @@ export const createExchangeEndpoint: Endpoint = {
         throw new APIError('targetAddress is required for fiat_to_crypto', 400)
       }
     }
-    if (type === 'crypto_to_fiat') {
-      if (!bankDetails || typeof bankDetails !== 'string' || !bankDetails.trim()) {
-        throw new APIError('bankDetails is required for crypto_to_fiat', 400)
-      }
+
+    const exchangerBankAccountName = process.env.BANK_ACCOUNT_NAME_EXCHANGER?.trim()
+    const exchangerBankAccountNumber = process.env.BANK_ACCOUNT_NUMBER_EXCHANGER?.trim()
+
+    if (type === 'fiat_to_crypto' && (!exchangerBankAccountName || !exchangerBankAccountNumber)) {
+      throw new APIError(
+        'Missing BANK_ACCOUNT_NAME_EXCHANGER or BANK_ACCOUNT_NUMBER_EXCHANGER environment configuration',
+        500,
+      )
     }
+
+    const exchangerBankDetails =
+      type === 'fiat_to_crypto'
+        ? `Account Name: ${exchangerBankAccountName}, Account Number: ${exchangerBankAccountNumber}`
+        : null
+
+    const bankAccountName = process.env.BANK_ACCOUNT_NAME_LOTTO?.trim()
+    const bankAccountNumber = process.env.BANK_ACCOUNT_NUMBER_LOTTO?.trim()
+
+    if (type === 'crypto_to_fiat' && (!bankAccountName || !bankAccountNumber)) {
+      throw new APIError(
+        'Missing BANK_ACCOUNT_NAME or BANK_ACCOUNT_NUMBER environment configuration',
+        500,
+      )
+    }
+
+    const bankDetailsFromEnv =
+      type === 'crypto_to_fiat'
+        ? `Account Name: ${bankAccountName}, Account Number: ${bankAccountNumber}`
+        : null
 
     const { payload } = req
 
@@ -120,8 +144,8 @@ export const createExchangeEndpoint: Endpoint = {
         amountPhp,
         type: type as (typeof validTypes)[number],
         network,
-        targetAddress: type === 'fiat_to_crypto' ? targetAddress?.trim() : undefined,
-        bankDetails: type === 'crypto_to_fiat' ? bankDetails?.trim() : undefined,
+        targetAddress: type === 'fiat_to_crypto' ? targetAddress?.trim() : null,
+        bankDetails: bankDetailsFromEnv,
         treasury: treasury.id,
         status: 'pending',
       },
@@ -142,7 +166,7 @@ export const createExchangeEndpoint: Endpoint = {
         ? `1 PHP = ${currentRate.phpToUsdtRate} USDT`
         : `1 USDT = ${currentRate.usdtToPhpRate} PHP`
 
-    const depositAddress = type === 'crypto_to_fiat' ? treasury.walletAddress : undefined
+    const depositAddress = type === 'crypto_to_fiat' ? treasury.walletAddress : null
 
     return Response.json({
       success: true,
@@ -150,7 +174,13 @@ export const createExchangeEndpoint: Endpoint = {
         userSends,
         userReceives,
         appliedRate,
-        ...(depositAddress && { depositAddress }),
+        ...(exchangerBankDetails && {
+          bankDetails: {
+            accountName: exchangerBankAccountName,
+            accountNumber: exchangerBankAccountNumber,
+          },
+        }),
+        ...(depositAddress && type === 'crypto_to_fiat' && { depositAddress }),
       },
       transaction: {
         id: transaction.id,
@@ -160,7 +190,6 @@ export const createExchangeEndpoint: Endpoint = {
         amountUsdt: transaction.amountUsdt,
         network: transaction.network,
         targetAddress: transaction.targetAddress,
-        bankDetails: transaction.bankDetails,
         status: transaction.status,
         createdAt: transaction.createdAt,
       },
