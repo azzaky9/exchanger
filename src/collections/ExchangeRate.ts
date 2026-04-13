@@ -1,8 +1,11 @@
-import type { CollectionConfig } from 'payload'
 import { getExchangeRateEndpoint, getExchangeRatePublic } from '@/endpoints/getExchangeRate'
+import type { Access, CollectionConfig } from 'payload'
 
-const isAdmin = ({ req: { user } }: { req: { user?: { roles?: string[] } } }) =>
-  user?.roles?.includes('admin') ?? false
+const isAdmin: Access = ({ req: { user } }) => user?.roles?.includes('admin') ?? false
+
+const roundToSixDecimals = (value: number) => Math.round(value * 1000000) / 1000000
+
+const roundToTwoDecimals = (value: number) => Math.round(value * 100) / 100
 
 export const ExchangeRate: CollectionConfig = {
   slug: 'exchange-rates',
@@ -15,19 +18,20 @@ export const ExchangeRate: CollectionConfig = {
     useAsTitle: 'pair',
     defaultColumns: [
       'pair',
-      'referenceRate',
+      'usdtToPhpReferenceRate',
       'usdtToPhpRate',
+      'usdtToPhpSpread',
+      'phpToUsdtReferenceRate',
       'phpToUsdtRate',
-      'usdtToPhpMarkupPercentage',
-      'phpToUsdtMarkupPercentage',
+      'phpToUsdtSpread',
       'updatedAt',
     ],
   },
   access: {
     read: () => true,
-    create: isAdmin as any,
-    update: isAdmin as any,
-    delete: isAdmin as any,
+    create: isAdmin,
+    update: isAdmin,
+    delete: isAdmin,
   },
   endpoints: [getExchangeRateEndpoint, getExchangeRatePublic],
   hooks: {
@@ -141,7 +145,34 @@ export const ExchangeRate: CollectionConfig = {
 
     {
       name: 'usdtToPhpRate',
-      label: 'USDT → PHP Rate',
+      label: 'USDT → PHP Final Rate',
+      type: 'number',
+      required: true,
+      admin: {
+        description: 'Final rate used when user sells USDT and receives PHP.',
+      },
+    },
+    {
+      name: 'usdtToPhpSpread',
+      label: 'USDT → PHP Profit / Spread',
+      type: 'number',
+      admin: {
+        readOnly: true,
+        description: 'Real-time difference between the reference and final rate.',
+      },
+    },
+    {
+      name: 'usdtToPhpSpreadPercentage',
+      label: 'USDT → PHP Spread (%)',
+      type: 'number',
+      admin: {
+        readOnly: true,
+        description: 'Spread expressed as a percentage of the reference rate.',
+      },
+    },
+    {
+      name: 'phpToUsdtReferenceRate',
+      label: 'PHP → USDT Reference Rate',
       type: 'number',
       required: true,
       admin: {
@@ -149,8 +180,8 @@ export const ExchangeRate: CollectionConfig = {
       },
     },
     {
-      name: 'usdtToPhpMarkupPercentage',
-      label: 'USDT → PHP Markup (%)',
+      name: 'phpToUsdtSpread',
+      label: 'PHP → USDT Profit / Spread',
       type: 'number',
       admin: {
         hidden: true,
@@ -178,8 +209,8 @@ export const ExchangeRate: CollectionConfig = {
       },
     },
     {
-      name: 'phpToUsdtMarkupPercentage',
-      label: 'PHP → USDT Markup (%)',
+      name: 'phpToUsdtSpreadPercentage',
+      label: 'PHP → USDT Spread (%)',
       type: 'number',
       admin: {
         hidden: true,

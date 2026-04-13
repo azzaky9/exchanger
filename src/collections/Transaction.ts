@@ -1,10 +1,10 @@
-import type { CollectionConfig } from 'payload'
 import crypto from 'node:crypto'
+import type { CollectionConfig } from 'payload'
+import { checkSettlementEndpoint } from '../endpoints/checkSettlement'
 import { createExchangeEndpoint } from '../endpoints/createExchange'
 import { createExchangeBatchEndpoint } from '../endpoints/createExchangeBatch'
-import { checkSettlementEndpoint } from '../endpoints/checkSettlement'
-import { settlementStatusEndpoint } from '../endpoints/settlementStatus'
 import { financeSummaryEndpoint } from '../endpoints/finance-summary'
+import { settlementStatusEndpoint } from '../endpoints/settlementStatus'
 
 export const Transaction: CollectionConfig = {
   slug: 'transactions',
