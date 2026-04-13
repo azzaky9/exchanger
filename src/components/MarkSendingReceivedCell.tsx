@@ -60,7 +60,7 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
         whiteSpace: 'nowrap',
       }}
     >
-      {loading ? 'Updating...' : 'Notify Received'}
+      {loading ? 'Updating...' : 'Confirm Sending'}
     </button>
   )
 }

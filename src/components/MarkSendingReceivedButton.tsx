@@ -56,7 +56,7 @@ export function MarkSendingReceivedButton() {
           fontWeight: 600,
         }}
       >
-        {loading ? 'Updating...' : 'Notify Sending'}
+        {loading ? 'Updating...' : 'Confirm Sending'}
       </button>
 
       {message && (
