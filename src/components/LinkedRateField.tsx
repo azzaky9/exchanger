@@ -18,8 +18,8 @@
  *   { name: 'phpToUsdtRateGroup', type: 'ui', admin: { components: { Field: '/components/LinkedRateField#LinkedRateFieldPhp' } } }
  */
 
-import React, { useCallback, useEffect, useRef } from 'react'
-import { useField, useFormFields, useForm } from '@payloadcms/ui'
+import { useField, useForm, useFormFields } from '@payloadcms/ui'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 
 // ─── shared styles ────────────────────────────────────────────────────────────
 
@@ -48,6 +48,14 @@ const styles = {
     alignItems: 'end',
   } as React.CSSProperties,
 
+  rowSecondary: {
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr',
+    gap: '12px',
+    alignItems: 'end',
+    marginTop: '10px',
+  } as React.CSSProperties,
+
   field: {
     display: 'flex',
     flexDirection: 'column' as const,
@@ -74,9 +82,16 @@ const styles = {
   } as React.CSSProperties,
 
   arrow: {
-    fontSize: '18px',
-    color: 'var(--theme-elevation-400)',
-    paddingBottom: '8px',
+    width: '28px',
+    height: '28px',
+    borderRadius: '999px',
+    border: '1px solid var(--theme-elevation-200)',
+    background: 'var(--theme-elevation-0)',
+    color: 'var(--theme-elevation-500)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '4px',
     userSelect: 'none' as const,
   },
 
@@ -84,6 +99,32 @@ const styles = {
     fontSize: '11px',
     color: 'var(--theme-elevation-450)',
     marginTop: '8px',
+  },
+
+  stats: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '8px',
+    marginTop: '10px',
+  } as React.CSSProperties,
+
+  statCard: {
+    border: '1px solid var(--theme-elevation-150)',
+    borderRadius: '6px',
+    padding: '8px 10px',
+    background: 'var(--theme-elevation-0)',
+  } as React.CSSProperties,
+
+  statLabel: {
+    fontSize: '11px',
+    color: 'var(--theme-elevation-500)',
+    marginBottom: '2px',
+  },
+
+  statValue: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: 'var(--theme-text)',
   },
 
   badge: {
@@ -106,17 +147,12 @@ function round(n: number, decimals: number) {
   return Math.round(n * factor) / factor
 }
 
-/**
- * Derive the display rate from referenceRate + markup%.
- * "discount" direction: rate = reference × (1 - pct/100)
- */
+// Derive final rate from reference + discount markup.
 function pctToRate(referenceRate: number, pct: number): number {
   return round(referenceRate * (1 - pct / 100), 6)
 }
 
-/**
- * Derive markup% from referenceRate and the actual rate.
- */
+// Derive markup% from reference and final rate.
 function rateToPct(referenceRate: number, rate: number): number {
   if (referenceRate === 0) return 0
   return round((Math.abs(referenceRate - rate) / referenceRate) * 100, 2)
@@ -127,53 +163,85 @@ function rateToPct(referenceRate: number, rate: number): number {
 interface LinkedRateEditorProps {
   /** Label shown at the top of the widget */
   heading: string
-  /** Payload field path for the rate, e.g. "usdtToPhpRate" */
+  /** Payload field path for the ramp reference/original rate */
+  referenceFieldPath: string
+  /** Payload field path for the final rate, e.g. "usdtToPhpRate" */
   rateFieldPath: string
   /** Payload field path for the markup %, e.g. "usdtToPhpMarkupPercentage" */
   pctFieldPath: string
   /** Human labels */
+  referenceLabel: string
   rateLabel: string
   pctLabel: string
+  spreadLabel: string
+  spreadPctLabel: string
   /** Which `_lastEdited` sentinel value to stamp */
+  referenceKey: string
   rateKey: string
   pctKey: string
+  /** Optional spread persistence paths */
+  spreadFieldPath?: string
+  spreadPctFieldPath?: string
   /** Description of the rate unit */
   rateUnit: string
-  /**
-   * When true, the effective reference rate used for markup calculations is
-   * 1/referenceRate.  This is needed for the PHP→USDT side where the market
-   * rate is expressed as "USDT per 1 PHP" = 1/(USDT per PHP reference).
-   */
-  invertRate?: boolean
+}
+
+function ArrowIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M5 12h12m0 0-4-4m4 4-4 4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
 
 function LinkedRateEditor({
   heading,
+  referenceFieldPath,
   rateFieldPath,
   pctFieldPath,
+  referenceLabel,
   rateLabel,
   pctLabel,
+  spreadLabel,
+  spreadPctLabel,
+  referenceKey,
   rateKey,
   pctKey,
+  spreadFieldPath,
+  spreadPctFieldPath,
   rateUnit,
-  invertRate = false,
 }: LinkedRateEditorProps) {
   const { dispatchFields, setModified } = useForm()
+  const { setValue: setLastEdited } = useField<string>({ path: '_lastEdited' })
 
   // Subscribe to the three relevant fields
-  const referenceRateField = useFormFields(([fields]) => fields['referenceRate'])
+  const referenceRateField = useFormFields(([fields]) => fields[referenceFieldPath])
   const rateField = useFormFields(([fields]) => fields[rateFieldPath])
   const pctField = useFormFields(([fields]) => fields[pctFieldPath])
 
-  const rawReferenceRate = Number(referenceRateField?.value ?? 0)
-  // The effective reference rate for this side's math
-  const effectiveRef = invertRate && rawReferenceRate > 0 ? 1 / rawReferenceRate : rawReferenceRate
+  const referenceRate = Number(referenceRateField?.value ?? 0)
 
   const rateValue = Number(rateField?.value ?? 0)
   const pctValue = Number(pctField?.value ?? 0)
 
+  const spreadValue = useMemo(() => {
+    if (referenceRate <= 0 || rateValue <= 0) return 0
+    return round(Math.abs(referenceRate - rateValue), 6)
+  }, [referenceRate, rateValue])
+
+  const spreadPctValue = useMemo(() => {
+    if (referenceRate <= 0 || rateValue <= 0) return 0
+    return round((spreadValue / referenceRate) * 100, 2)
+  }, [referenceRate, rateValue, spreadValue])
+
   // Track which input the user last touched so we don't create feedback loops
-  const lastTouched = useRef<'rate' | 'pct' | null>(null)
+  const lastTouched = useRef<'reference' | 'rate' | 'pct' | null>(null)
 
   const dispatch = useCallback(
     (path: string, value: number | string) => {
@@ -183,20 +251,56 @@ function LinkedRateEditor({
     [dispatchFields, setModified],
   )
 
-  // ── When referenceRate changes, re-derive the rate from the current pct ──
-  const prevRefRate = useRef(effectiveRef)
+  // Persist spread fields while editing so server-side values stay in sync.
   useEffect(() => {
-    if (
-      effectiveRef > 0 &&
-      effectiveRef !== prevRefRate.current &&
-      lastTouched.current !== 'rate'
-    ) {
-      const newRate = pctToRate(effectiveRef, pctValue)
-      dispatch(rateFieldPath, newRate)
-      dispatch('_lastEdited', rateKey)
+    if (spreadFieldPath) dispatch(spreadFieldPath, spreadValue)
+    if (spreadPctFieldPath) dispatch(spreadPctFieldPath, spreadPctValue)
+  }, [spreadFieldPath, spreadPctFieldPath, spreadValue, spreadPctValue, dispatch])
+
+  // Recalculate dependent value when reference changes.
+  const prevRefRate = useRef(referenceRate)
+  useEffect(() => {
+    if (referenceRate > 0 && referenceRate !== prevRefRate.current) {
+      if (lastTouched.current === 'rate') {
+        const newPct = rateToPct(referenceRate, rateValue)
+        dispatch(pctFieldPath, newPct)
+        setLastEdited(rateKey)
+      } else {
+        const newRate = pctToRate(referenceRate, pctValue)
+        dispatch(rateFieldPath, newRate)
+        setLastEdited(referenceKey)
+      }
     }
-    prevRefRate.current = effectiveRef
-  }, [effectiveRef]) // eslint-disable-line react-hooks/exhaustive-deps
+    prevRefRate.current = referenceRate
+  }, [
+    referenceRate,
+    rateValue,
+    pctValue,
+    rateFieldPath,
+    pctFieldPath,
+    referenceKey,
+    rateKey,
+    dispatch,
+    setLastEdited,
+  ])
+
+  const handleReferenceChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newReference = parseFloat(e.target.value)
+      if (isNaN(newReference)) return
+
+      lastTouched.current = 'reference'
+      dispatch(referenceFieldPath, newReference)
+
+      if (newReference > 0) {
+        const newRate = pctToRate(newReference, pctValue)
+        dispatch(rateFieldPath, newRate)
+      }
+
+      setLastEdited(referenceKey)
+    },
+    [referenceFieldPath, pctValue, rateFieldPath, referenceKey, dispatch, setLastEdited],
+  )
 
   const handleRateChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,14 +310,14 @@ function LinkedRateEditor({
 
       dispatch(rateFieldPath, newRate)
 
-      if (effectiveRef > 0) {
-        const newPct = rateToPct(effectiveRef, newRate)
+      if (referenceRate > 0) {
+        const newPct = rateToPct(referenceRate, newRate)
         dispatch(pctFieldPath, newPct)
       }
 
-      dispatch('_lastEdited', rateKey)
+      setLastEdited(rateKey)
     },
-    [effectiveRef, rateFieldPath, pctFieldPath, rateKey, dispatch],
+    [referenceRate, rateFieldPath, pctFieldPath, rateKey, dispatch, setLastEdited],
   )
 
   const handlePctChange = useCallback(
@@ -224,14 +328,14 @@ function LinkedRateEditor({
 
       dispatch(pctFieldPath, newPct)
 
-      if (effectiveRef > 0) {
-        const newRate = pctToRate(effectiveRef, newPct)
+      if (referenceRate > 0) {
+        const newRate = pctToRate(referenceRate, newPct)
         dispatch(rateFieldPath, newRate)
       }
 
-      dispatch('_lastEdited', pctKey)
+      setLastEdited(pctKey)
     },
-    [effectiveRef, rateFieldPath, pctFieldPath, pctKey, dispatch],
+    [referenceRate, rateFieldPath, pctFieldPath, pctKey, dispatch, setLastEdited],
   )
 
   const handleBlur = useCallback(() => {
@@ -242,11 +346,31 @@ function LinkedRateEditor({
     <div style={styles.wrapper}>
       <div style={styles.heading}>
         {heading}
-        {rawReferenceRate > 0 && <span style={styles.badge}>ref: {rawReferenceRate} PHP</span>}
+        {referenceRate > 0 && <span style={styles.badge}>ref: {referenceRate}</span>}
       </div>
 
       <div style={styles.row}>
-        {/* Rate input */}
+        {/* Reference input */}
+        <div style={styles.field}>
+          <label style={styles.label}>{referenceLabel}</label>
+          <input
+            type="number"
+            step="any"
+            value={referenceRate || ''}
+            onChange={handleReferenceChange}
+            onBlur={handleBlur}
+            placeholder="e.g. 56.50"
+            style={styles.input}
+            onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--theme-elevation-400)')}
+          />
+          <span style={styles.hint}>Original market/reference for this ramp</span>
+        </div>
+
+        <div style={styles.arrow}>
+          <ArrowIcon />
+        </div>
+
+        {/* Final rate input */}
         <div style={styles.field}>
           <label style={styles.label}>{rateLabel}</label>
           <input
@@ -255,16 +379,16 @@ function LinkedRateEditor({
             value={rateValue || ''}
             onChange={handleRateChange}
             onBlur={handleBlur}
-            placeholder={invertRate ? 'e.g. 0.01754' : 'e.g. 56.50'}
+            placeholder="e.g. 56.50"
             style={styles.input}
             onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--theme-elevation-400)')}
           />
           <span style={styles.hint}>{rateUnit}</span>
         </div>
+      </div>
 
-        <div style={styles.arrow}>⇄</div>
-
-        {/* Percentage input */}
+      <div style={styles.rowSecondary}>
+        {/* Rate input */}
         <div style={styles.field}>
           <label style={styles.label}>{pctLabel}</label>
           <input
@@ -279,16 +403,30 @@ function LinkedRateEditor({
             style={styles.input}
             onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--theme-elevation-400)')}
           />
-          <span style={styles.hint}>% discount from reference rate</span>
+          <span style={styles.hint}>
+            Set the markup percentage to control your profit margin on this rate.
+          </span>
+        </div>
+
+        <div style={styles.arrow}>
+          <ArrowIcon />
+        </div>
+
+        <div style={styles.stats}>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>{spreadLabel}</div>
+            <div style={styles.statValue}>{spreadValue}</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statLabel}>{spreadPctLabel}</div>
+            <div style={styles.statValue}>{spreadPctValue}%</div>
+          </div>
         </div>
       </div>
 
-      {effectiveRef > 0 && rateValue > 0 && (
+      {referenceRate > 0 && rateValue > 0 && (
         <p style={{ ...styles.hint, marginTop: '10px' }}>
-          At {pctValue}% markup:{' '}
-          {invertRate
-            ? `1 PHP → ${rateValue} USDT (market: ${round(effectiveRef, 6)} USDT)`
-            : `1 USDT → ${rateValue} PHP (market: ${rawReferenceRate} PHP)`}
+          At {pctValue}% markup: final rate is {rateValue} (market/reference: {referenceRate}).
         </p>
       )}
     </div>
@@ -302,12 +440,19 @@ export function LinkedRateField() {
   return (
     <LinkedRateEditor
       heading="USDT → PHP Pricing"
+      referenceFieldPath="usdtToPhpReferenceRate"
       rateFieldPath="usdtToPhpRate"
       pctFieldPath="usdtToPhpMarkupPercentage"
+      referenceLabel="Reference Rate (1 USDT = ? PHP)"
       rateLabel="Rate (1 USDT = ? PHP)"
       pctLabel="Markup %"
+      spreadLabel="Profit / Spread (PHP)"
+      spreadPctLabel="Spread (%)"
+      referenceKey="usdtToPhpReferenceRate"
       rateKey="usdtToPhpRate"
       pctKey="usdtToPhpMarkupPercentage"
+      spreadFieldPath="usdtToPhpSpread"
+      spreadPctFieldPath="usdtToPhpSpreadPercentage"
       rateUnit="PHP received per USDT sold"
     />
   )
@@ -318,14 +463,20 @@ export function LinkedRateFieldPhp() {
   return (
     <LinkedRateEditor
       heading="PHP → USDT Pricing"
+      referenceFieldPath="phpToUsdtReferenceRate"
       rateFieldPath="phpToUsdtRate"
       pctFieldPath="phpToUsdtMarkupPercentage"
+      referenceLabel="Reference Rate (1 PHP = ? USDT)"
       rateLabel="Rate (1 PHP = ? USDT)"
       pctLabel="Markup %"
+      spreadLabel="Profit / Spread (USDT)"
+      spreadPctLabel="Spread (%)"
+      referenceKey="phpToUsdtReferenceRate"
       rateKey="phpToUsdtRate"
       pctKey="phpToUsdtMarkupPercentage"
+      spreadFieldPath="phpToUsdtSpread"
+      spreadPctFieldPath="phpToUsdtSpreadPercentage"
       rateUnit="USDT received per PHP spent"
-      invertRate
     />
   )
 }

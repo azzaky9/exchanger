@@ -28,7 +28,7 @@ export const ExchangeRate: CollectionConfig = {
     ],
   },
   access: {
-    read: () => true,
+    read: isAdmin,
     create: isAdmin,
     update: isAdmin,
     delete: isAdmin,
@@ -49,46 +49,67 @@ export const ExchangeRate: CollectionConfig = {
      */
     beforeChange: [
       ({ data }) => {
-        const referenceRate = Number(data.referenceRate ?? 0)
+        const usdtToPhpReferenceRate = Number(data.usdtToPhpReferenceRate ?? 0)
+        const phpToUsdtReferenceRate = Number(data.phpToUsdtReferenceRate ?? 0)
         const lastEdited: string | undefined = data._lastEdited
         delete data._lastEdited // never persist this sentinel
 
         // ── USDT → PHP side ──────────────────────────────────────────────────
-        if (referenceRate > 0) {
-          if (lastEdited === 'usdtToPhpMarkupPercentage') {
+        if (usdtToPhpReferenceRate > 0) {
+          if (
+            lastEdited === 'usdtToPhpMarkupPercentage' ||
+            lastEdited === 'usdtToPhpReferenceRate'
+          ) {
             // Percentage changed → derive rate
             const pct = Number(data.usdtToPhpMarkupPercentage ?? 0)
             // Selling USDT: user gets LESS PHP than market (discount for platform)
-            data.usdtToPhpRate = Math.round(referenceRate * (1 - pct / 100) * 10000) / 10000
+            data.usdtToPhpRate = roundToSixDecimals(usdtToPhpReferenceRate * (1 - pct / 100))
           } else {
             // Rate changed (or no sentinel) → derive percentage
             const usdtToPhpRate = Number(data.usdtToPhpRate ?? 0)
             if (usdtToPhpRate > 0) {
-              const diff = Math.abs(referenceRate - usdtToPhpRate)
-              data.usdtToPhpMarkupPercentage = Math.round((diff / referenceRate) * 100 * 100) / 100
+              const diff = Math.abs(usdtToPhpReferenceRate - usdtToPhpRate)
+              data.usdtToPhpMarkupPercentage = roundToTwoDecimals(
+                (diff / usdtToPhpReferenceRate) * 100,
+              )
             }
           }
+
+          const usdtToPhpRate = Number(data.usdtToPhpRate ?? 0)
+          const usdtToPhpDiff = Math.abs(usdtToPhpReferenceRate - usdtToPhpRate)
+          data.usdtToPhpSpread = roundToSixDecimals(usdtToPhpDiff)
+          data.usdtToPhpSpreadPercentage = roundToTwoDecimals(
+            usdtToPhpReferenceRate > 0 ? (usdtToPhpDiff / usdtToPhpReferenceRate) * 100 : 0,
+          )
         }
 
         // ── PHP → USDT side ──────────────────────────────────────────────────
-        if (referenceRate > 0) {
-          // Base: how many USDT per 1 PHP at market rate
-          const impliedPhpToUsdt = 1 / referenceRate
-
-          if (lastEdited === 'phpToUsdtMarkupPercentage') {
+        if (phpToUsdtReferenceRate > 0) {
+          if (
+            lastEdited === 'phpToUsdtMarkupPercentage' ||
+            lastEdited === 'phpToUsdtReferenceRate'
+          ) {
             // Percentage changed → derive rate
             const pct = Number(data.phpToUsdtMarkupPercentage ?? 0)
             // Buying USDT: user gets LESS USDT per PHP than market (platform keeps margin)
-            data.phpToUsdtRate = Math.round(impliedPhpToUsdt * (1 - pct / 100) * 1e8) / 1e8
+            data.phpToUsdtRate = roundToSixDecimals(phpToUsdtReferenceRate * (1 - pct / 100))
           } else {
             // Rate changed (or no sentinel) → derive percentage
             const phpToUsdtRate = Number(data.phpToUsdtRate ?? 0)
             if (phpToUsdtRate > 0) {
-              const diff = Math.abs(impliedPhpToUsdt - phpToUsdtRate)
-              data.phpToUsdtMarkupPercentage =
-                Math.round((diff / impliedPhpToUsdt) * 100 * 100) / 100
+              const diff = Math.abs(phpToUsdtReferenceRate - phpToUsdtRate)
+              data.phpToUsdtMarkupPercentage = roundToTwoDecimals(
+                (diff / phpToUsdtReferenceRate) * 100,
+              )
             }
           }
+
+          const phpToUsdtRate = Number(data.phpToUsdtRate ?? 0)
+          const phpToUsdtDiff = Math.abs(phpToUsdtReferenceRate - phpToUsdtRate)
+          data.phpToUsdtSpread = roundToSixDecimals(phpToUsdtDiff)
+          data.phpToUsdtSpreadPercentage = roundToTwoDecimals(
+            phpToUsdtReferenceRate > 0 ? (phpToUsdtDiff / phpToUsdtReferenceRate) * 100 : 0,
+          )
         }
 
         return data
@@ -96,17 +117,6 @@ export const ExchangeRate: CollectionConfig = {
     ],
   },
   fields: [
-    // Live rate banner (read-only UI component)
-    {
-      name: 'liveApiRate',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '/components/LiveRateReference#LiveRateReference',
-        },
-      },
-    },
-
     {
       name: 'pair',
       label: 'Currency Pair',
@@ -120,18 +130,17 @@ export const ExchangeRate: CollectionConfig = {
       },
     },
 
+    // ── USDT → PHP group ───────────────────────────────────────────────────
     {
-      name: 'referenceRate',
-      label: 'Reference Rate (1 USDT = ? PHP)',
+      name: 'usdtToPhpReferenceRate',
+      label: 'USDT → PHP Reference Rate',
       type: 'number',
       required: true,
       admin: {
-        description:
-          'Market/reference rate for 1 USDT in PHP. Changing this recalculates both rates automatically.',
+        hidden: true,
       },
     },
 
-    // ── USDT → PHP group ───────────────────────────────────────────────────
     {
       name: 'usdtToPhpRateGroup',
       type: 'ui',
@@ -149,7 +158,16 @@ export const ExchangeRate: CollectionConfig = {
       type: 'number',
       required: true,
       admin: {
-        description: 'Final rate used when user sells USDT and receives PHP.',
+        hidden: true,
+      },
+    },
+    {
+      name: 'usdtToPhpMarkupPercentage',
+      label: 'USDT → PHP Markup (%)',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        hidden: true,
       },
     },
     {
@@ -157,8 +175,7 @@ export const ExchangeRate: CollectionConfig = {
       label: 'USDT → PHP Profit / Spread',
       type: 'number',
       admin: {
-        readOnly: true,
-        description: 'Real-time difference between the reference and final rate.',
+        hidden: true,
       },
     },
     {
@@ -166,8 +183,7 @@ export const ExchangeRate: CollectionConfig = {
       label: 'USDT → PHP Spread (%)',
       type: 'number',
       admin: {
-        readOnly: true,
-        description: 'Spread expressed as a percentage of the reference rate.',
+        hidden: true,
       },
     },
     {
@@ -209,6 +225,15 @@ export const ExchangeRate: CollectionConfig = {
       },
     },
     {
+      name: 'phpToUsdtMarkupPercentage',
+      label: 'PHP → USDT Markup (%)',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        hidden: true,
+      },
+    },
+    {
       name: 'phpToUsdtSpreadPercentage',
       label: 'PHP → USDT Spread (%)',
       type: 'number',
@@ -230,7 +255,9 @@ export const ExchangeRate: CollectionConfig = {
      * admin last edited here so the beforeChange hook can resolve conflicts.
      *
      * Values: 'usdtToPhpRate' | 'usdtToPhpMarkupPercentage'
+     *       | 'usdtToPhpReferenceRate'
      *       | 'phpToUsdtRate' | 'phpToUsdtMarkupPercentage'
+     *       | 'phpToUsdtReferenceRate'
      */
     {
       name: '_lastEdited',

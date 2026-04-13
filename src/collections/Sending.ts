@@ -1,10 +1,12 @@
 import type { CollectionConfig } from 'payload'
+import { markSendingReceivedEndpoint } from '../endpoints/markSendingReceived'
 
 export const Sending: CollectionConfig = {
   slug: 'sending',
+  endpoints: [markSendingReceivedEndpoint],
   admin: {
     useAsTitle: 'id',
-    defaultColumns: ['amount', 'currency', 'status', 'method', 'createdAt'],
+    defaultColumns: ['amount', 'currency', 'status', 'markAsReceivedAction', 'method', 'createdAt'],
     group: 'Operations',
     hidden: ({ user }) => !user?.roles?.includes('user'),
   },
@@ -16,6 +18,17 @@ export const Sending: CollectionConfig = {
     delete: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
   },
   fields: [
+    {
+      name: 'markAsReceivedAction',
+      type: 'ui',
+      admin: {
+        condition: (data, _, { user }) =>
+          Boolean(data?.id) && Boolean(user?.roles?.includes('user')),
+        components: {
+          Cell: '/components/MarkSendingReceivedCell#MarkSendingReceivedCell',
+        },
+      },
+    },
     {
       name: 'amount',
       type: 'number',

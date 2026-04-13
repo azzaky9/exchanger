@@ -10,15 +10,8 @@ export const getExchangeRateEndpoint: Endpoint = {
       throw new APIError('Unauthorized', 401)
     }
 
-    const { payload } = req
-
     try {
-      const rates = await payload.find({
-        collection: 'exchange-rates',
-      })
       const phpToUsd = await getPhpToUsdRate()
-
-      console.log(`[exchange-rate] Fetched exchange rates: ${JSON.stringify(rates)}`)
 
       return Response.json({ phpToUsdRate: phpToUsd })
     } catch (error) {
@@ -40,6 +33,19 @@ export const getExchangeRatePublic: Endpoint = {
     try {
       const exchangeRate = await payload.find({
         collection: 'exchange-rates',
+        where: {
+          isActive: {
+            equals: true,
+          },
+        },
+        select: {
+          phpToUsdtRate: true,
+          usdtToPhpRate: true,
+          updatedAt: true,
+        },
+        depth: 0,
+        limit: 1,
+        sort: '-updatedAt',
       })
       const docs = exchangeRate.docs || []
       const rate = docs.length > 0 ? (docs[0] as ExchangeRate) : null
@@ -47,9 +53,8 @@ export const getExchangeRatePublic: Endpoint = {
       const response = {
         phpToUsdtRate: rate?.phpToUsdtRate ?? null,
         usdtToPhpRate: rate?.usdtToPhpRate ?? null,
+        updatedAt: rate?.updatedAt ?? null,
       }
-
-      console.log(`[exchange-rate] Fetched exchange rates: ${JSON.stringify(response)}`)
 
       return Response.json(response)
     } catch (error) {

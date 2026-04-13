@@ -63,18 +63,33 @@ export const Transaction: CollectionConfig = {
                 req,
               })
 
-              const originalRate = rateDoc.referenceRate as number
-              const usdtToPhpRate = rateDoc.usdtToPhpRate as number
-              const phpToUsdtRate = rateDoc.phpToUsdtRate as number
+              const rateDocData = rateDoc as {
+                referenceRate?: number | null
+                usdtToPhpReferenceRate?: number | null
+                phpToUsdtReferenceRate?: number | null
+                usdtToPhpRate?: number | null
+                phpToUsdtRate?: number | null
+              }
 
-              if (originalRate > 0) {
+              const legacyReferenceRate = Number(rateDocData.referenceRate ?? 0)
+              const usdtToPhpReferenceRate = Number(
+                rateDocData.usdtToPhpReferenceRate ?? legacyReferenceRate,
+              )
+              const phpToUsdtReferenceRate = Number(
+                rateDocData.phpToUsdtReferenceRate ??
+                  (legacyReferenceRate > 0 ? 1 / legacyReferenceRate : 0),
+              )
+              const usdtToPhpRate = Number(rateDocData.usdtToPhpRate ?? 0)
+              const phpToUsdtRate = Number(rateDocData.phpToUsdtRate ?? 0)
+
+              if (usdtToPhpReferenceRate > 0 || phpToUsdtReferenceRate > 0) {
                 let amountAtOriginalRate = 0
                 let amountFinal = 0
                 let profit = 0
 
                 if (data.type === 'crypto_to_fiat') {
                   // User sends USDT (amountPhp), receives PHP (amountUsdt)
-                  amountAtOriginalRate = data.amountPhp * originalRate // PHP at reference rate
+                  amountAtOriginalRate = data.amountPhp * usdtToPhpReferenceRate // PHP at reference rate
                   amountFinal = data.amountPhp * usdtToPhpRate // PHP user actually receives
                   profit = amountAtOriginalRate - amountFinal // PHP profit
 
@@ -84,7 +99,7 @@ export const Transaction: CollectionConfig = {
                   data.profit = Math.round(profit * 100) / 100
                 } else {
                   // User sends PHP (amountPhp), receives USDT (amountUsdt)
-                  amountAtOriginalRate = data.amountPhp / originalRate // USDT at reference rate
+                  amountAtOriginalRate = data.amountPhp * phpToUsdtReferenceRate // USDT at reference rate
                   amountFinal = data.amountPhp * phpToUsdtRate // USDT user actually receives
                   profit = amountAtOriginalRate - amountFinal // USDT profit
 
@@ -110,7 +125,7 @@ export const Transaction: CollectionConfig = {
         const { payload } = req
         const isFiatToCrypto = doc.type === 'fiat_to_crypto'
 
-        const sendingData = {
+        const sendingDataForCreate = {
           amount: doc.amountPhp,
           currency: isFiatToCrypto ? ('PHP' as const) : ('USDT' as const),
           transaction: doc.id,
@@ -119,7 +134,7 @@ export const Transaction: CollectionConfig = {
           txHash: isFiatToCrypto ? undefined : doc.txHash,
         }
 
-        const receivedData = {
+        const receivedDataForCreate = {
           amount: doc.amountUsdt as number,
           currency: isFiatToCrypto ? ('USDT' as const) : ('PHP' as const),
           transaction: doc.id,
@@ -128,16 +143,33 @@ export const Transaction: CollectionConfig = {
           txHash: isFiatToCrypto ? doc.txHash : undefined,
         }
 
+        // Keep existing child statuses on transaction updates; only sync value/method/hash fields.
+        const sendingDataForUpdate = {
+          amount: doc.amountPhp,
+          currency: isFiatToCrypto ? ('PHP' as const) : ('USDT' as const),
+          transaction: doc.id,
+          method: isFiatToCrypto ? ('bank_transfer' as const) : ('crypto' as const),
+          txHash: isFiatToCrypto ? undefined : doc.txHash,
+        }
+
+        const receivedDataForUpdate = {
+          amount: doc.amountUsdt as number,
+          currency: isFiatToCrypto ? ('USDT' as const) : ('PHP' as const),
+          transaction: doc.id,
+          method: isFiatToCrypto ? ('crypto' as const) : ('bank_transfer' as const),
+          txHash: isFiatToCrypto ? doc.txHash : undefined,
+        }
+
         if (operation === 'create') {
           const received = await payload.create({
             collection: 'received',
-            data: receivedData,
+            data: receivedDataForCreate,
             req,
           })
 
           const sending = await payload.create({
             collection: 'sending',
-            data: sendingData,
+            data: sendingDataForCreate,
             req,
           })
 
@@ -159,7 +191,7 @@ export const Transaction: CollectionConfig = {
               collection: 'received',
               id:
                 typeof doc.receivedRecord === 'object' ? doc.receivedRecord.id : doc.receivedRecord,
-              data: receivedData,
+              data: receivedDataForUpdate,
               req,
             })
           }
@@ -167,7 +199,7 @@ export const Transaction: CollectionConfig = {
             await payload.update({
               collection: 'sending',
               id: typeof doc.sendingRecord === 'object' ? doc.sendingRecord.id : doc.sendingRecord,
-              data: sendingData,
+              data: sendingDataForUpdate,
               req,
             })
           }
@@ -206,8 +238,8 @@ export const Transaction: CollectionConfig = {
           defaultValue: 'fiat_to_crypto',
           label: 'Transaction Type',
           options: [
-            { label: 'Fiat to Crypto', value: 'fiat_to_crypto' },
-            { label: 'Crypto to Fiat', value: 'crypto_to_fiat' },
+            { label: 'Fiat to Crypto (onramps)', value: 'fiat_to_crypto' },
+            { label: 'Crypto to Fiat (offramps)', value: 'crypto_to_fiat' },
           ],
           admin: {
             description: 'Direction of the exchange',
@@ -222,6 +254,8 @@ export const Transaction: CollectionConfig = {
           options: [
             { label: 'Pending', value: 'pending' },
             { label: 'Confirmed', value: 'confirmed' },
+            { label: 'Fiat Received', value: 'fiat_received' },
+            { label: 'Crypto Received', value: 'crypto_received' },
             { label: 'Processing', value: 'processing' },
             { label: 'Completed', value: 'completed' },
             { label: 'Refunded', value: 'refunded' },
@@ -286,7 +320,7 @@ export const Transaction: CollectionConfig = {
             description: 'Destination wallet address for the transfer',
             width: '50%',
           },
-          validate: (val: string | null | undefined, { data }: { data: Record<string, any> }) => {
+          validate: (val: string | null | undefined, { data }: { data: { type?: string } }) => {
             if (data?.type === 'fiat_to_crypto' && !val) {
               return 'Target address is required for fiat to crypto transfers'
             }
@@ -302,7 +336,7 @@ export const Transaction: CollectionConfig = {
             description: 'Bank Name, Account Number, and Account Name',
             width: '50%',
           },
-          validate: (val: string | null | undefined, { data }: { data: Record<string, any> }) => {
+          validate: (val: string | null | undefined, { data }: { data: { type?: string } }) => {
             if (data?.type === 'crypto_to_fiat' && !val) {
               return 'Bank details are required for crypto to fiat transfers'
             }
@@ -469,9 +503,7 @@ export const Transaction: CollectionConfig = {
       type: 'relationship',
       relationTo: 'received',
       admin: {
-        position: 'sidebar',
-        readOnly: true,
-        condition: (data) => Boolean(data?.id),
+        hidden: true,
       },
     },
     {

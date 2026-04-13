@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useRef, useCallback } from 'react'
-import { useFormFields, useForm } from '@payloadcms/ui'
+import { useForm, useFormFields } from '@payloadcms/ui'
+import { useCallback, useEffect, useRef } from 'react'
 
 interface RateDoc {
-  referenceRate: number
+  usdtToPhpReferenceRate: number
+  phpToUsdtReferenceRate: number
   usdtToPhpRate: number
   phpToUsdtRate: number
 }
@@ -41,8 +42,13 @@ export function ExchangeRateCalculator() {
         const res = await fetch(`/api/exchange-rates/${exchangeRateId}`)
         if (!res.ok) return
         const doc = await res.json()
+        const legacyReferenceRate = Number(doc.referenceRate ?? 0)
+
         cachedRate.current = {
-          referenceRate: doc.referenceRate as number,
+          usdtToPhpReferenceRate: Number(doc.usdtToPhpReferenceRate ?? legacyReferenceRate),
+          phpToUsdtReferenceRate: Number(
+            doc.phpToUsdtReferenceRate ?? (legacyReferenceRate > 0 ? 1 / legacyReferenceRate : 0),
+          ),
           usdtToPhpRate: doc.usdtToPhpRate as number,
           phpToUsdtRate: doc.phpToUsdtRate as number,
         }
@@ -59,7 +65,7 @@ export function ExchangeRateCalculator() {
     const rate = cachedRate.current
     if (!rate || !amountPhp || amountPhp <= 0) return
 
-    const { referenceRate, usdtToPhpRate, phpToUsdtRate } = rate
+    const { usdtToPhpReferenceRate, phpToUsdtReferenceRate, usdtToPhpRate, phpToUsdtRate } = rate
 
     let usdtOriginal = 0
     let usdtFinal = 0
@@ -69,14 +75,38 @@ export function ExchangeRateCalculator() {
       // User inputs USDT → compute PHP they receive at each rate
       // amountOriginal field = PHP at reference rate (display only)
       // amountUsdt field     = PHP the user actually receives at markup rate
-      usdtOriginal = amountPhp * referenceRate   // USDT × (PHP/USDT) = PHP
-      usdtFinal    = amountPhp * usdtToPhpRate   // USDT × (PHP/USDT) = PHP
-      profit       = usdtOriginal - usdtFinal    // admin keeps the spread
+      usdtOriginal = amountPhp * usdtToPhpReferenceRate // USDT × (PHP/USDT) = PHP
+      usdtFinal = amountPhp * usdtToPhpRate // USDT × (PHP/USDT) = PHP
+      profit = usdtOriginal - usdtFinal // admin keeps the spread
+
+      const computedUsdtOriginal = Math.round(usdtOriginal * 100) / 100
+      const computedUsdtFinal = Math.round(usdtFinal * 100) / 100
+      const computedProfit = Math.round(profit * 100) / 100
+
+      // Skip dispatch if nothing changed to avoid re-render loops
+      if (
+        prevRef.current?.usdtOriginal === computedUsdtOriginal &&
+        prevRef.current?.usdt === computedUsdtFinal &&
+        prevRef.current?.profit === computedProfit
+      ) {
+        return
+      }
+
+      prevRef.current = {
+        usdtOriginal: computedUsdtOriginal,
+        usdt: computedUsdtFinal,
+        profit: computedProfit,
+      }
+
+      dispatchFields({ type: 'UPDATE', path: 'amountUsdtOriginal', value: computedUsdtOriginal })
+      dispatchFields({ type: 'UPDATE', path: 'amountUsdt', value: computedUsdtFinal })
+      dispatchFields({ type: 'UPDATE', path: 'profit', value: computedProfit })
+      return
     } else {
       // fiat_to_crypto: user inputs PHP → compute USDT they receive at each rate
-      usdtOriginal = amountPhp / referenceRate   // PHP ÷ (PHP/USDT) = USDT
-      usdtFinal    = amountPhp * phpToUsdtRate   // PHP × (USDT/PHP) = USDT
-      profit       = usdtOriginal - usdtFinal    // admin keeps the spread
+      usdtOriginal = amountPhp * phpToUsdtReferenceRate // PHP × (USDT/PHP) = USDT
+      usdtFinal = amountPhp * phpToUsdtRate // PHP × (USDT/PHP) = USDT
+      profit = usdtOriginal - usdtFinal // admin keeps the spread
     }
 
     const computedUsdtOriginal = Math.round(usdtOriginal * 1_000_000) / 1_000_000

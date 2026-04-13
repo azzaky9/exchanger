@@ -59,671 +59,682 @@ export type SupportedTimezones =
   | 'Pacific/Guam'
   | 'Pacific/Noumea'
   | 'Pacific/Auckland'
-  | 'Pacific/Fiji'
+  | 'Pacific/Fiji';
 
 export interface Config {
   auth: {
-    users: UserAuthOperations
-  }
-  blocks: {}
+    users: UserAuthOperations;
+  };
+  blocks: {};
   collections: {
-    users: User
-    media: Media
-    networks: Network
-    treasury: Treasury
-    transactions: Transaction
-    batches: Batch
-    'exchange-rates': ExchangeRate
-    received: Received
-    sending: Sending
-    'payload-kv': PayloadKv
-    'payload-locked-documents': PayloadLockedDocument
-    'payload-preferences': PayloadPreference
-    'payload-migrations': PayloadMigration
-  }
+    users: User;
+    media: Media;
+    networks: Network;
+    treasury: Treasury;
+    transactions: Transaction;
+    batches: Batch;
+    'exchange-rates': ExchangeRate;
+    received: Received;
+    sending: Sending;
+    'payload-kv': PayloadKv;
+    'payload-locked-documents': PayloadLockedDocument;
+    'payload-preferences': PayloadPreference;
+    'payload-migrations': PayloadMigration;
+  };
   collectionsJoins: {
     batches: {
-      transactions: 'transactions'
-    }
-  }
+      transactions: 'transactions';
+    };
+  };
   collectionsSelect: {
-    users: UsersSelect<false> | UsersSelect<true>
-    media: MediaSelect<false> | MediaSelect<true>
-    networks: NetworksSelect<false> | NetworksSelect<true>
-    treasury: TreasurySelect<false> | TreasurySelect<true>
-    transactions: TransactionsSelect<false> | TransactionsSelect<true>
-    batches: BatchesSelect<false> | BatchesSelect<true>
-    'exchange-rates': ExchangeRatesSelect<false> | ExchangeRatesSelect<true>
-    received: ReceivedSelect<false> | ReceivedSelect<true>
-    sending: SendingSelect<false> | SendingSelect<true>
-    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>
-    'payload-locked-documents':
-      | PayloadLockedDocumentsSelect<false>
-      | PayloadLockedDocumentsSelect<true>
-    'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>
-    'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>
-  }
+    users: UsersSelect<false> | UsersSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
+    networks: NetworksSelect<false> | NetworksSelect<true>;
+    treasury: TreasurySelect<false> | TreasurySelect<true>;
+    transactions: TransactionsSelect<false> | TransactionsSelect<true>;
+    batches: BatchesSelect<false> | BatchesSelect<true>;
+    'exchange-rates': ExchangeRatesSelect<false> | ExchangeRatesSelect<true>;
+    received: ReceivedSelect<false> | ReceivedSelect<true>;
+    sending: SendingSelect<false> | SendingSelect<true>;
+    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
+    'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
+    'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
+    'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
+  };
   db: {
-    defaultIDType: number
-  }
-  fallbackLocale: null
-  globals: {}
-  globalsSelect: {}
-  locale: null
+    defaultIDType: number;
+  };
+  fallbackLocale: null;
+  globals: {};
+  globalsSelect: {};
+  locale: null;
   widgets: {
-    collections: CollectionsWidget
-  }
-  user: User
+    collections: CollectionsWidget;
+  };
+  user: User;
   jobs: {
-    tasks: unknown
-    workflows: unknown
-  }
+    tasks: unknown;
+    workflows: unknown;
+  };
 }
 export interface UserAuthOperations {
   forgotPassword: {
-    email: string
-    password: string
-  }
+    email: string;
+    password: string;
+  };
   login: {
-    email: string
-    password: string
-  }
+    email: string;
+    password: string;
+  };
   registerFirstUser: {
-    email: string
-    password: string
-  }
+    email: string;
+    password: string;
+  };
   unlock: {
-    email: string
-    password: string
-  }
+    email: string;
+    password: string;
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
-  id: number
-  roles: ('admin' | 'user')[]
-  updatedAt: string
-  createdAt: string
-  enableAPIKey?: boolean | null
-  apiKey?: string | null
-  apiKeyIndex?: string | null
-  email: string
-  resetPasswordToken?: string | null
-  resetPasswordExpiration?: string | null
-  salt?: string | null
-  hash?: string | null
-  loginAttempts?: number | null
-  lockUntil?: string | null
+  id: number;
+  roles: ('admin' | 'user')[];
+  updatedAt: string;
+  createdAt: string;
+  enableAPIKey?: boolean | null;
+  apiKey?: string | null;
+  apiKeyIndex?: string | null;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
   sessions?:
     | {
-        id: string
-        createdAt?: string | null
-        expiresAt: string
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
       }[]
-    | null
-  password?: string | null
-  collection: 'users'
+    | null;
+  password?: string | null;
+  collection: 'users';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
  */
 export interface Media {
-  id: number
-  alt: string
-  updatedAt: string
-  createdAt: string
-  url?: string | null
-  thumbnailURL?: string | null
-  filename?: string | null
-  mimeType?: string | null
-  filesize?: number | null
-  width?: number | null
-  height?: number | null
-  focalX?: number | null
-  focalY?: number | null
+  id: number;
+  alt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "networks".
  */
 export interface Network {
-  id: number
+  id: number;
   /**
    * e.g. Ethereum, BEP20, Tron, Polygon
    */
-  name: string
+  name: string;
   /**
    * e.g. eth, bep20, trx, polygon
    */
-  symbol: string
-  networkType: 'mainnet' | 'testnet'
+  symbol: string;
+  networkType: 'mainnet' | 'testnet';
   /**
    * JSON-RPC endpoint for this network (e.g. https://bsc-dataseed.binance.org)
    */
-  rpcUrl: string
+  rpcUrl: string;
   /**
    * USDT token contract address on this network
    */
-  usdtContractAddress: string
+  usdtContractAddress: string;
   /**
    * Number of decimals for USDT on this network (e.g. 6 for Ethereum/Tron, 18 for BSC)
    */
-  usdtDecimals: number
+  usdtDecimals: number;
   /**
    * e.g. ETH, BNB, TRX, MATIC
    */
-  gasFeeTokenName: string
-  isActive?: boolean | null
-  updatedAt: string
-  createdAt: string
+  gasFeeTokenName: string;
+  isActive?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "treasury".
  */
 export interface Treasury {
-  id: number
+  id: number;
   /**
    * A friendly name to identify this wallet (e.g. 'Main USDT Wallet')
    */
-  walletName: string
+  walletName: string;
   /**
    * Public address of your system wallet
    */
-  walletAddress: string
+  walletAddress: string;
   /**
    * Encrypted at rest. Enter the raw private key — it will be encrypted on save.
    */
-  privateKey?: string | null
-  network: number | Network
+  privateKey?: string | null;
+  network: number | Network;
   /**
    * Track available funds
    */
-  currentBalance?: number | null
+  currentBalance?: number | null;
   /**
    * Latest transaction from this wallet
    */
-  latestTransactionAt?: string | null
-  updatedAt: string
-  createdAt: string
+  latestTransactionAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "transactions".
  */
 export interface Transaction {
-  id: number
+  id: number;
   /**
    * Auto-generated Order ID
    */
-  orderId?: string | null
+  orderId?: string | null;
   /**
    * Direction of the exchange
    */
-  type: 'fiat_to_crypto' | 'crypto_to_fiat'
-  status: 'pending' | 'confirmed' | 'processing' | 'completed' | 'refunded' | 'review_needed'
+  type: 'fiat_to_crypto' | 'crypto_to_fiat';
+  status:
+    | 'pending'
+    | 'confirmed'
+    | 'fiat_received'
+    | 'crypto_received'
+    | 'processing'
+    | 'completed'
+    | 'refunded'
+    | 'review_needed';
   /**
    * Source treasury wallet for the transfer
    */
-  treasury: number | Treasury
-  network: number | Network
+  treasury: number | Treasury;
+  network: number | Network;
   /**
    * Amount in source currency (PHP for fiat→crypto, USDT for crypto→fiat)
    */
-  amountPhp: number
+  amountPhp: number;
   /**
    * Destination wallet address for the transfer
    */
-  targetAddress?: string | null
+  targetAddress?: string | null;
   /**
    * Bank Name, Account Number, and Account Name
    */
-  bankDetails?: string | null
+  bankDetails?: string | null;
   /**
    * Auto-computed at the reference/original exchange rate
    */
-  amountUsdtOriginal?: number | null
+  amountUsdtOriginal?: number | null;
   /**
    * Auto-computed at the markup/applied exchange rate
    */
-  amountUsdt?: number | null
+  amountUsdt?: number | null;
   /**
    * Select the exchange rate to use for this transaction
    */
-  exchangeRate: number | ExchangeRate
+  exchangeRate: number | ExchangeRate;
   /**
    * Calculated difference based on transaction type
    */
-  profit?: number | null
+  profit?: number | null;
   /**
    * Transfer fee amount
    */
-  gasFee?: number | null
+  gasFee?: number | null;
   /**
    * On-chain transaction hash after transfer
    */
-  txHash?: string | null
+  txHash?: string | null;
   /**
    * Nullable initially, assigned when batched
    */
-  batch?: (number | null) | Batch
+  batch?: (number | null) | Batch;
   /**
    * Reason for failure or review flag
    */
-  failReason?: string | null
+  failReason?: string | null;
   /**
    * Optional reference to a fiat settlement
    */
-  fiatSettlementId?: string | null
-  receivedRecord?: (number | null) | Received
-  sendingRecord?: (number | null) | Sending
-  updatedAt: string
-  createdAt: string
+  fiatSettlementId?: string | null;
+  receivedRecord?: (number | null) | Received;
+  sendingRecord?: (number | null) | Sending;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "exchange-rates".
  */
 export interface ExchangeRate {
-  id: number
+  id: number;
   /**
    * Fixed pair for this exchange rate configuration.
    */
-  pair: string
-  referenceRate?: number | null
-  /**
-   * Market/reference rate for 1 USDT in PHP. Changing this recalculates both rates automatically.
-   */
-  referenceRate: number
-  usdtToPhpRate: number
-  usdtToPhpMarkupPercentage?: number | null
-  phpToUsdtRate: number
-  phpToUsdtMarkupPercentage?: number | null
-  isActive?: boolean | null
-  _lastEdited?: string | null
-  updatedAt: string
-  createdAt: string
+  pair: string;
+  usdtToPhpReferenceRate: number;
+  usdtToPhpRate: number;
+  usdtToPhpMarkupPercentage?: number | null;
+  usdtToPhpSpread?: number | null;
+  usdtToPhpSpreadPercentage?: number | null;
+  phpToUsdtReferenceRate: number;
+  phpToUsdtSpread?: number | null;
+  phpToUsdtRate: number;
+  phpToUsdtMarkupPercentage?: number | null;
+  phpToUsdtSpreadPercentage?: number | null;
+  isActive?: boolean | null;
+  _lastEdited?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "batches".
  */
 export interface Batch {
-  id: number
+  id: number;
   /**
    * Total number of transactions in this batch
    */
-  transactionCount: number
+  transactionCount: number;
   /**
    * Total gross USDT before fees
    */
-  totalUsdtBatched: number
+  totalUsdtBatched: number;
   /**
    * Total exchange fees collected
    */
-  totalFeeUsdt: number
+  totalFeeUsdt: number;
   /**
    * Total USDT sent to users after fees
    */
-  totalNetUsdt: number
-  totalTrxSuccess?: number | null
-  totalTrxFail?: number | null
-  status: 'processing' | 'partial_success' | 'success' | 'failed'
-  executedAt?: string | null
+  totalNetUsdt: number;
+  totalTrxSuccess?: number | null;
+  totalTrxFail?: number | null;
+  status: 'processing' | 'partial_success' | 'success' | 'failed';
+  executedAt?: string | null;
   /**
    * Transactions included in this batch
    */
   transactions?: {
-    docs?: (number | Transaction)[]
-    hasNextPage?: boolean
-    totalDocs?: number
-  }
-  updatedAt: string
-  createdAt: string
+    docs?: (number | Transaction)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "received".
  */
 export interface Received {
-  id: number
-  amount: number
-  currency: 'PHP' | 'USDT'
-  transaction: number | Transaction
-  status: 'pending' | 'confirmed'
-  method?: ('bank_transfer' | 'crypto') | null
-  referenceNumber?: string | null
-  senderAddress?: string | null
-  txHash?: string | null
-  updatedAt: string
-  createdAt: string
+  id: number;
+  amount: number;
+  currency: 'PHP' | 'USDT';
+  transaction: number | Transaction;
+  status: 'pending' | 'confirmed';
+  method?: ('bank_transfer' | 'crypto') | null;
+  referenceNumber?: string | null;
+  senderAddress?: string | null;
+  txHash?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "sending".
  */
 export interface Sending {
-  id: number
-  amount: number
-  currency: 'PHP' | 'USDT'
-  transaction: number | Transaction
-  status: 'pending' | 'processing' | 'completed' | 'failed'
-  method?: ('bank_transfer' | 'crypto') | null
-  txHash?: string | null
-  receiverDetails?: string | null
-  updatedAt: string
-  createdAt: string
+  id: number;
+  amount: number;
+  currency: 'PHP' | 'USDT';
+  transaction: number | Transaction;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  method?: ('bank_transfer' | 'crypto') | null;
+  txHash?: string | null;
+  receiverDetails?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
-  id: number
-  key: string
+  id: number;
+  key: string;
   data:
     | {
-        [k: string]: unknown
+        [k: string]: unknown;
       }
     | unknown[]
     | string
     | number
     | boolean
-    | null
+    | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: number
+  id: number;
   document?:
     | ({
-        relationTo: 'users'
-        value: number | User
+        relationTo: 'users';
+        value: number | User;
       } | null)
     | ({
-        relationTo: 'media'
-        value: number | Media
+        relationTo: 'media';
+        value: number | Media;
       } | null)
     | ({
-        relationTo: 'networks'
-        value: number | Network
+        relationTo: 'networks';
+        value: number | Network;
       } | null)
     | ({
-        relationTo: 'treasury'
-        value: number | Treasury
+        relationTo: 'treasury';
+        value: number | Treasury;
       } | null)
     | ({
-        relationTo: 'transactions'
-        value: number | Transaction
+        relationTo: 'transactions';
+        value: number | Transaction;
       } | null)
     | ({
-        relationTo: 'batches'
-        value: number | Batch
+        relationTo: 'batches';
+        value: number | Batch;
       } | null)
     | ({
-        relationTo: 'exchange-rates'
-        value: number | ExchangeRate
+        relationTo: 'exchange-rates';
+        value: number | ExchangeRate;
       } | null)
     | ({
-        relationTo: 'received'
-        value: number | Received
+        relationTo: 'received';
+        value: number | Received;
       } | null)
     | ({
-        relationTo: 'sending'
-        value: number | Sending
-      } | null)
-  globalSlug?: string | null
+        relationTo: 'sending';
+        value: number | Sending;
+      } | null);
+  globalSlug?: string | null;
   user: {
-    relationTo: 'users'
-    value: number | User
-  }
-  updatedAt: string
-  createdAt: string
+    relationTo: 'users';
+    value: number | User;
+  };
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: number
+  id: number;
   user: {
-    relationTo: 'users'
-    value: number | User
-  }
-  key?: string | null
+    relationTo: 'users';
+    value: number | User;
+  };
+  key?: string | null;
   value?:
     | {
-        [k: string]: unknown
+        [k: string]: unknown;
       }
     | unknown[]
     | string
     | number
     | boolean
-    | null
-  updatedAt: string
-  createdAt: string
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: number
-  name?: string | null
-  batch?: number | null
-  updatedAt: string
-  createdAt: string
+  id: number;
+  name?: string | null;
+  batch?: number | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
-  roles?: T
-  updatedAt?: T
-  createdAt?: T
-  enableAPIKey?: T
-  apiKey?: T
-  apiKeyIndex?: T
-  email?: T
-  resetPasswordToken?: T
-  resetPasswordExpiration?: T
-  salt?: T
-  hash?: T
-  loginAttempts?: T
-  lockUntil?: T
+  roles?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  enableAPIKey?: T;
+  apiKey?: T;
+  apiKeyIndex?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
   sessions?:
     | T
     | {
-        id?: T
-        createdAt?: T
-        expiresAt?: T
-      }
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
-  alt?: T
-  updatedAt?: T
-  createdAt?: T
-  url?: T
-  thumbnailURL?: T
-  filename?: T
-  mimeType?: T
-  filesize?: T
-  width?: T
-  height?: T
-  focalX?: T
-  focalY?: T
+  alt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "networks_select".
  */
 export interface NetworksSelect<T extends boolean = true> {
-  name?: T
-  symbol?: T
-  networkType?: T
-  rpcUrl?: T
-  usdtContractAddress?: T
-  usdtDecimals?: T
-  gasFeeTokenName?: T
-  isActive?: T
-  updatedAt?: T
-  createdAt?: T
+  name?: T;
+  symbol?: T;
+  networkType?: T;
+  rpcUrl?: T;
+  usdtContractAddress?: T;
+  usdtDecimals?: T;
+  gasFeeTokenName?: T;
+  isActive?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "treasury_select".
  */
 export interface TreasurySelect<T extends boolean = true> {
-  walletName?: T
-  walletAddress?: T
-  privateKey?: T
-  network?: T
-  currentBalance?: T
-  latestTransactionAt?: T
-  updatedAt?: T
-  createdAt?: T
+  walletName?: T;
+  walletAddress?: T;
+  privateKey?: T;
+  network?: T;
+  currentBalance?: T;
+  latestTransactionAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "transactions_select".
  */
 export interface TransactionsSelect<T extends boolean = true> {
-  orderId?: T
-  type?: T
-  status?: T
-  treasury?: T
-  network?: T
-  amountPhp?: T
-  targetAddress?: T
-  bankDetails?: T
-  amountUsdtOriginal?: T
-  amountUsdt?: T
-  exchangeRate?: T
-  profit?: T
-  gasFee?: T
-  txHash?: T
-  batch?: T
-  failReason?: T
-  fiatSettlementId?: T
-  receivedRecord?: T
-  sendingRecord?: T
-  updatedAt?: T
-  createdAt?: T
+  orderId?: T;
+  type?: T;
+  status?: T;
+  treasury?: T;
+  network?: T;
+  amountPhp?: T;
+  targetAddress?: T;
+  bankDetails?: T;
+  amountUsdtOriginal?: T;
+  amountUsdt?: T;
+  exchangeRate?: T;
+  profit?: T;
+  gasFee?: T;
+  txHash?: T;
+  batch?: T;
+  failReason?: T;
+  fiatSettlementId?: T;
+  receivedRecord?: T;
+  sendingRecord?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "batches_select".
  */
 export interface BatchesSelect<T extends boolean = true> {
-  transactionCount?: T
-  totalUsdtBatched?: T
-  totalFeeUsdt?: T
-  totalNetUsdt?: T
-  totalTrxSuccess?: T
-  totalTrxFail?: T
-  status?: T
-  executedAt?: T
-  transactions?: T
-  updatedAt?: T
-  createdAt?: T
+  transactionCount?: T;
+  totalUsdtBatched?: T;
+  totalFeeUsdt?: T;
+  totalNetUsdt?: T;
+  totalTrxSuccess?: T;
+  totalTrxFail?: T;
+  status?: T;
+  executedAt?: T;
+  transactions?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "exchange-rates_select".
  */
 export interface ExchangeRatesSelect<T extends boolean = true> {
-  pair?: T
-  referenceRate?: T
-  usdtToPhpReferenceRate?: T
-  usdtToPhpRate?: T
-  usdtToPhpMarkupPercentage?: T
-  phpToUsdtRate?: T
-  phpToUsdtMarkupPercentage?: T
-  isActive?: T
-  _lastEdited?: T
-  updatedAt?: T
-  createdAt?: T
+  pair?: T;
+  usdtToPhpReferenceRate?: T;
+  usdtToPhpRate?: T;
+  usdtToPhpMarkupPercentage?: T;
+  usdtToPhpSpread?: T;
+  usdtToPhpSpreadPercentage?: T;
+  phpToUsdtReferenceRate?: T;
+  phpToUsdtSpread?: T;
+  phpToUsdtRate?: T;
+  phpToUsdtMarkupPercentage?: T;
+  phpToUsdtSpreadPercentage?: T;
+  isActive?: T;
+  _lastEdited?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "received_select".
  */
 export interface ReceivedSelect<T extends boolean = true> {
-  amount?: T
-  currency?: T
-  transaction?: T
-  status?: T
-  method?: T
-  referenceNumber?: T
-  senderAddress?: T
-  txHash?: T
-  updatedAt?: T
-  createdAt?: T
+  amount?: T;
+  currency?: T;
+  transaction?: T;
+  status?: T;
+  method?: T;
+  referenceNumber?: T;
+  senderAddress?: T;
+  txHash?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "sending_select".
  */
 export interface SendingSelect<T extends boolean = true> {
-  amount?: T
-  currency?: T
-  transaction?: T
-  status?: T
-  method?: T
-  txHash?: T
-  receiverDetails?: T
-  updatedAt?: T
-  createdAt?: T
+  amount?: T;
+  currency?: T;
+  transaction?: T;
+  status?: T;
+  method?: T;
+  txHash?: T;
+  receiverDetails?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
-  key?: T
-  data?: T
+  key?: T;
+  data?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents_select".
  */
 export interface PayloadLockedDocumentsSelect<T extends boolean = true> {
-  document?: T
-  globalSlug?: T
-  user?: T
-  updatedAt?: T
-  createdAt?: T
+  document?: T;
+  globalSlug?: T;
+  user?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-preferences_select".
  */
 export interface PayloadPreferencesSelect<T extends boolean = true> {
-  user?: T
-  key?: T
-  value?: T
-  updatedAt?: T
-  createdAt?: T
+  user?: T;
+  key?: T;
+  value?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-migrations_select".
  */
 export interface PayloadMigrationsSelect<T extends boolean = true> {
-  name?: T
-  batch?: T
-  updatedAt?: T
-  createdAt?: T
+  name?: T;
+  batch?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -731,17 +742,18 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
  */
 export interface CollectionsWidget {
   data?: {
-    [k: string]: unknown
-  }
-  width: 'full'
+    [k: string]: unknown;
+  };
+  width: 'full';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "auth".
  */
 export interface Auth {
-  [k: string]: unknown
+  [k: string]: unknown;
 }
+
 
 declare module 'payload' {
   export interface GeneratedTypes extends Config {}
