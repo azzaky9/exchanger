@@ -499,6 +499,15 @@ export const Transaction: CollectionConfig = {
       },
     },
     {
+      name: 'notes',
+      type: 'textarea',
+      label: 'Description / Notes',
+      admin: {
+        description:
+          'Optional notes for context when this transaction is created manually in admin or through API integration.',
+      },
+    },
+    {
       name: 'receivedRecord',
       type: 'relationship',
       relationTo: 'received',

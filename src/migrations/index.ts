@@ -12,6 +12,7 @@ import * as migration_20260325_050955_add_order_id_to_transactions from './20260
 import * as migration_20260326_142648 from './20260326_142648';
 import * as migration_20260327_081037 from './20260327_081037';
 import * as migration_20260413_102511 from './20260413_102511';
+import * as migration_20260413_103315 from './20260413_103315';
 
 export const migrations = [
   {
@@ -82,6 +83,11 @@ export const migrations = [
   {
     up: migration_20260413_102511.up,
     down: migration_20260413_102511.down,
-    name: '20260413_102511'
+    name: '20260413_102511',
+  },
+  {
+    up: migration_20260413_103315.up,
+    down: migration_20260413_103315.down,
+    name: '20260413_103315'
   },
 ];

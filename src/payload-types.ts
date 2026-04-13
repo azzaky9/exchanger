@@ -324,6 +324,10 @@ export interface Transaction {
    * Optional reference to a fiat settlement
    */
   fiatSettlementId?: string | null;
+  /**
+   * Optional notes for context when this transaction is created manually in admin or through API integration.
+   */
+  notes?: string | null;
   receivedRecord?: (number | null) | Received;
   sendingRecord?: (number | null) | Sending;
   updatedAt: string;
@@ -622,6 +626,7 @@ export interface TransactionsSelect<T extends boolean = true> {
   batch?: T;
   failReason?: T;
   fiatSettlementId?: T;
+  notes?: T;
   receivedRecord?: T;
   sendingRecord?: T;
   updatedAt?: T;

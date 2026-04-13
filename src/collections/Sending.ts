@@ -6,7 +6,7 @@ export const Sending: CollectionConfig = {
   endpoints: [markSendingReceivedEndpoint],
   admin: {
     useAsTitle: 'id',
-    defaultColumns: ['amount', 'currency', 'status', 'markAsReceivedAction', 'method', 'createdAt'],
+    defaultColumns: ['amount', 'currency', 'status', 'method', 'createdAt', 'markAsReceivedAction'],
     group: 'Operations',
     hidden: ({ user }) => !user?.roles?.includes('user'),
   },
