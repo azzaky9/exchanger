@@ -1,6 +1,6 @@
+import { randomUUID } from 'crypto'
 import type { Endpoint } from 'payload'
 import { APIError } from 'payload'
-import { randomUUID } from 'crypto'
 
 /**
  * POST /api/transactions/create-exchange
@@ -12,7 +12,8 @@ import { randomUUID } from 'crypto'
  *   - type: 'fiat_to_crypto' | 'crypto_to_fiat' (required)
  *   - amount: number (required — amount in the source currency: PHP for fiat_to_crypto, USDT for crypto_to_fiat)
  *   - network: number (network ID, required)
- *   - targetAddress: string (destination wallet, required)
+ *   - targetAddress: string (destination wallet, required for fiat_to_crypto)
+ *   - bankDetails: string (bank account details, required for crypto_to_fiat)
  *
  * Returns the created transaction.
  */
@@ -27,11 +28,12 @@ export const createExchangeEndpoint: Endpoint = {
     const body =
       typeof req.json === 'function' ? await req.json() : (req as unknown as { body: unknown }).body
 
-    const { type, amount, network, targetAddress } = body as {
+    const { type, amount, network, targetAddress, bankDetails } = body as {
       type?: string
       amount?: number
       network?: number
       targetAddress?: string
+      bankDetails?: string
     }
 
     const validTypes = ['fiat_to_crypto', 'crypto_to_fiat'] as const
@@ -46,8 +48,15 @@ export const createExchangeEndpoint: Endpoint = {
     if (!network || typeof network !== 'number') {
       throw new APIError('network is required (network ID)', 400)
     }
-    if (!targetAddress || typeof targetAddress !== 'string' || !targetAddress.trim()) {
-      throw new APIError('targetAddress is required', 400)
+    if (type === 'fiat_to_crypto') {
+      if (!targetAddress || typeof targetAddress !== 'string' || !targetAddress.trim()) {
+        throw new APIError('targetAddress is required for fiat_to_crypto', 400)
+      }
+    }
+    if (type === 'crypto_to_fiat') {
+      if (!bankDetails || typeof bankDetails !== 'string' || !bankDetails.trim()) {
+        throw new APIError('bankDetails is required for crypto_to_fiat', 400)
+      }
     }
 
     const { payload } = req
@@ -111,7 +120,8 @@ export const createExchangeEndpoint: Endpoint = {
         amountPhp,
         type: type as (typeof validTypes)[number],
         network,
-        targetAddress: targetAddress.trim(),
+        targetAddress: type === 'fiat_to_crypto' ? targetAddress?.trim() : undefined,
+        bankDetails: type === 'crypto_to_fiat' ? bankDetails?.trim() : undefined,
         treasury: treasury.id,
         status: 'pending',
       },
@@ -150,6 +160,7 @@ export const createExchangeEndpoint: Endpoint = {
         amountUsdt: transaction.amountUsdt,
         network: transaction.network,
         targetAddress: transaction.targetAddress,
+        bankDetails: transaction.bankDetails,
         status: transaction.status,
         createdAt: transaction.createdAt,
       },
