@@ -1,5 +1,6 @@
 'use client'
 
+import { CRYPTO_TO_FIAT_COLLECTION_SLUG } from '@/lib/collectionSlugs'
 import type { DefaultCellComponentProps } from 'payload'
 import { useState } from 'react'
 
@@ -27,7 +28,7 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
 
     setLoading(true)
     try {
-      const res = await fetch(`/api/sending/${sendingId}/mark-received`, {
+      const res = await fetch(`/api/${CRYPTO_TO_FIAT_COLLECTION_SLUG}/${sendingId}/mark-received`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

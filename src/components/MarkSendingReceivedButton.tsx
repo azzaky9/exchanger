@@ -1,5 +1,6 @@
 'use client'
 
+import { CRYPTO_TO_FIAT_COLLECTION_SLUG } from '@/lib/collectionSlugs'
 import { useDocumentInfo } from '@payloadcms/ui'
 import { useState } from 'react'
 
@@ -17,7 +18,7 @@ export function MarkSendingReceivedButton() {
     setIsError(false)
 
     try {
-      const res = await fetch(`/api/sending/${id}/mark-received`, {
+      const res = await fetch(`/api/${CRYPTO_TO_FIAT_COLLECTION_SLUG}/${id}/mark-received`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

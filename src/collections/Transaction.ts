@@ -1,3 +1,7 @@
+import {
+  CRYPTO_TO_FIAT_COLLECTION_SLUG,
+  FIAT_TO_CRYPTO_COLLECTION_SLUG,
+} from '@/lib/collectionSlugs'
 import crypto from 'node:crypto'
 import type { CollectionConfig } from 'payload'
 import { checkSettlementEndpoint } from '../endpoints/checkSettlement'
@@ -17,6 +21,7 @@ export const Transaction: CollectionConfig = {
   ],
   admin: {
     useAsTitle: 'id',
+    hidden: ({ user }) => !user?.roles?.includes('admin'),
     defaultColumns: [
       'id',
       'type',
@@ -38,8 +43,8 @@ export const Transaction: CollectionConfig = {
     },
   },
   access: {
-    create: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
-    read: ({ req: { user } }) => Boolean(user),
+    create: ({ req }) => Boolean(req.user), // just require auth
+    read: ({ req }) => Boolean(req.user),
     update: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
     delete: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
   },
@@ -61,6 +66,7 @@ export const Transaction: CollectionConfig = {
                 id: exchangeRateId,
                 depth: 0,
                 req,
+                overrideAccess: true,
               })
 
               const rateDocData = rateDoc as {
@@ -125,83 +131,141 @@ export const Transaction: CollectionConfig = {
         const { payload } = req
         const isFiatToCrypto = doc.type === 'fiat_to_crypto'
 
-        const sendingDataForCreate = {
-          amount: doc.amountPhp,
-          currency: isFiatToCrypto ? ('PHP' as const) : ('USDT' as const),
-          transaction: doc.id,
-          status: 'pending' as const,
-          method: isFiatToCrypto ? ('bank_transfer' as const) : ('crypto' as const),
-          txHash: isFiatToCrypto ? undefined : doc.txHash,
-        }
-
-        const receivedDataForCreate = {
+        // Keep payloads flow-specific so each related collection receives valid typed values.
+        const fiatToCryptoReceivedData = {
           amount: doc.amountUsdt as number,
-          currency: isFiatToCrypto ? ('USDT' as const) : ('PHP' as const),
+          currency: 'USDT' as const,
           transaction: doc.id,
           status: 'confirmed' as const,
-          method: isFiatToCrypto ? ('crypto' as const) : ('bank_transfer' as const),
-          txHash: isFiatToCrypto ? doc.txHash : undefined,
+          method: 'crypto' as const,
+          txHash: doc.txHash,
         }
 
-        // Keep existing child statuses on transaction updates; only sync value/method/hash fields.
-        const sendingDataForUpdate = {
-          amount: doc.amountPhp,
-          currency: isFiatToCrypto ? ('PHP' as const) : ('USDT' as const),
+        const cryptoToFiatSendingData = {
+          amount: doc.amountPhp as number,
+          currency: 'USDT' as const,
           transaction: doc.id,
-          method: isFiatToCrypto ? ('bank_transfer' as const) : ('crypto' as const),
-          txHash: isFiatToCrypto ? undefined : doc.txHash,
-        }
-
-        const receivedDataForUpdate = {
-          amount: doc.amountUsdt as number,
-          currency: isFiatToCrypto ? ('USDT' as const) : ('PHP' as const),
-          transaction: doc.id,
-          method: isFiatToCrypto ? ('crypto' as const) : ('bank_transfer' as const),
-          txHash: isFiatToCrypto ? doc.txHash : undefined,
+          status: 'pending' as const,
+          method: 'crypto' as const,
+          txHash: doc.txHash,
         }
 
         if (operation === 'create') {
-          const received = await payload.create({
-            collection: 'received',
-            data: receivedDataForCreate,
-            req,
-          })
-
-          const sending = await payload.create({
-            collection: 'sending',
-            data: sendingDataForCreate,
-            req,
-          })
-
-          // Update transaction with references
-          await payload.update({
-            collection: 'transactions',
-            id: doc.id,
-            data: {
-              receivedRecord: received.id,
-              sendingRecord: sending.id,
-            },
-            req,
-            context: { skipSync: true },
-          })
-        } else if (operation === 'update') {
-          // Sync updates to child records if they exist
-          if (doc.receivedRecord) {
-            await payload.update({
-              collection: 'received',
-              id:
-                typeof doc.receivedRecord === 'object' ? doc.receivedRecord.id : doc.receivedRecord,
-              data: receivedDataForUpdate,
+          if (isFiatToCrypto) {
+            const received = await payload.create({
+              collection: FIAT_TO_CRYPTO_COLLECTION_SLUG,
+              data: fiatToCryptoReceivedData,
               req,
+              overrideAccess: true,
+            })
+
+            await payload.update({
+              collection: 'transactions',
+              id: doc.id,
+              data: {
+                receivedRecord: received.id,
+                sendingRecord: null,
+              },
+              req,
+              context: { skipSync: true },
+              overrideAccess: true,
+            })
+          } else {
+            const sending = await payload.create({
+              collection: CRYPTO_TO_FIAT_COLLECTION_SLUG,
+              data: cryptoToFiatSendingData,
+              req,
+              overrideAccess: true,
+            })
+
+            await payload.update({
+              collection: 'transactions',
+              id: doc.id,
+              data: {
+                sendingRecord: sending.id,
+                receivedRecord: null,
+              },
+              req,
+              context: { skipSync: true },
+              overrideAccess: true,
             })
           }
-          if (doc.sendingRecord) {
-            await payload.update({
-              collection: 'sending',
-              id: typeof doc.sendingRecord === 'object' ? doc.sendingRecord.id : doc.sendingRecord,
-              data: sendingDataForUpdate,
-              req,
-            })
+        } else if (operation === 'update') {
+          const receivedRecordId =
+            typeof doc.receivedRecord === 'object' ? doc.receivedRecord?.id : doc.receivedRecord
+          const sendingRecordId =
+            typeof doc.sendingRecord === 'object' ? doc.sendingRecord?.id : doc.sendingRecord
+
+          if (isFiatToCrypto) {
+            if (receivedRecordId) {
+              await payload.update({
+                collection: FIAT_TO_CRYPTO_COLLECTION_SLUG,
+                id: receivedRecordId,
+                data: {
+                  amount: fiatToCryptoReceivedData.amount,
+                  currency: fiatToCryptoReceivedData.currency,
+                  transaction: fiatToCryptoReceivedData.transaction,
+                  method: fiatToCryptoReceivedData.method,
+                  txHash: fiatToCryptoReceivedData.txHash,
+                },
+                req,
+                overrideAccess: true,
+              })
+            } else {
+              const received = await payload.create({
+                collection: FIAT_TO_CRYPTO_COLLECTION_SLUG,
+                data: fiatToCryptoReceivedData,
+                req,
+                overrideAccess: true,
+              })
+
+              await payload.update({
+                collection: 'transactions',
+                id: doc.id,
+                data: {
+                  receivedRecord: received.id,
+                  sendingRecord: null,
+                },
+                req,
+                context: { skipSync: true },
+                overrideAccess: true,
+              })
+            }
+          } else {
+            if (sendingRecordId) {
+              await payload.update({
+                collection: CRYPTO_TO_FIAT_COLLECTION_SLUG,
+                id: sendingRecordId,
+                data: {
+                  amount: cryptoToFiatSendingData.amount,
+                  currency: cryptoToFiatSendingData.currency,
+                  transaction: cryptoToFiatSendingData.transaction,
+                  method: cryptoToFiatSendingData.method,
+                  txHash: cryptoToFiatSendingData.txHash,
+                },
+                req,
+                overrideAccess: true,
+              })
+            } else {
+              const sending = await payload.create({
+                collection: CRYPTO_TO_FIAT_COLLECTION_SLUG,
+                data: cryptoToFiatSendingData,
+                req,
+                overrideAccess: true,
+              })
+
+              await payload.update({
+                collection: 'transactions',
+                id: doc.id,
+                data: {
+                  sendingRecord: sending.id,
+                  receivedRecord: null,
+                },
+                req,
+                context: { skipSync: true },
+                overrideAccess: true,
+              })
+            }
           }
         }
       },
@@ -510,7 +574,7 @@ export const Transaction: CollectionConfig = {
     {
       name: 'receivedRecord',
       type: 'relationship',
-      relationTo: 'received',
+      relationTo: FIAT_TO_CRYPTO_COLLECTION_SLUG,
       admin: {
         hidden: true,
       },
@@ -518,7 +582,7 @@ export const Transaction: CollectionConfig = {
     {
       name: 'sendingRecord',
       type: 'relationship',
-      relationTo: 'sending',
+      relationTo: CRYPTO_TO_FIAT_COLLECTION_SLUG,
       admin: {
         position: 'sidebar',
         readOnly: true,

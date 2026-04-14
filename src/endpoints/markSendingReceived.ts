@@ -1,3 +1,4 @@
+import { CRYPTO_TO_FIAT_COLLECTION_SLUG } from '@/lib/collectionSlugs'
 import type { Transaction as TransactionDoc } from '@/payload-types'
 import { APIError, type Endpoint } from 'payload'
 
@@ -26,7 +27,7 @@ export const markSendingReceivedEndpoint: Endpoint = {
 
     try {
       const sendingDoc = await payload.findByID({
-        collection: 'sending',
+        collection: CRYPTO_TO_FIAT_COLLECTION_SLUG,
         id: sendingId,
         depth: 0,
         req,
@@ -54,7 +55,7 @@ export const markSendingReceivedEndpoint: Endpoint = {
         transactionDoc.type === 'fiat_to_crypto' ? 'fiat_received' : 'crypto_received'
 
       await payload.update({
-        collection: 'sending',
+        collection: CRYPTO_TO_FIAT_COLLECTION_SLUG,
         id: sendingId,
         data: {
           status: 'completed',

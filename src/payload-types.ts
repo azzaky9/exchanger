@@ -74,8 +74,8 @@ export interface Config {
     transactions: Transaction;
     batches: Batch;
     'exchange-rates': ExchangeRate;
-    received: Received;
-    sending: Sending;
+    'fiat-to-crypto': FiatToCrypto;
+    'crypto-to-fiat': CryptoToFiat;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -94,8 +94,8 @@ export interface Config {
     transactions: TransactionsSelect<false> | TransactionsSelect<true>;
     batches: BatchesSelect<false> | BatchesSelect<true>;
     'exchange-rates': ExchangeRatesSelect<false> | ExchangeRatesSelect<true>;
-    received: ReceivedSelect<false> | ReceivedSelect<true>;
-    sending: SendingSelect<false> | SendingSelect<true>;
+    'fiat-to-crypto': FiatToCryptoSelect<false> | FiatToCryptoSelect<true>;
+    'crypto-to-fiat': CryptoToFiatSelect<false> | CryptoToFiatSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -328,8 +328,8 @@ export interface Transaction {
    * Optional notes for context when this transaction is created manually in admin or through API integration.
    */
   notes?: string | null;
-  receivedRecord?: (number | null) | Received;
-  sendingRecord?: (number | null) | Sending;
+  receivedRecord?: (number | null) | FiatToCrypto;
+  sendingRecord?: (number | null) | CryptoToFiat;
   updatedAt: string;
   createdAt: string;
 }
@@ -397,12 +397,18 @@ export interface Batch {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "received".
+ * via the `definition` "fiat-to-crypto".
  */
-export interface Received {
+export interface FiatToCrypto {
   id: number;
+  /**
+   * Fiat to Crypto flow: user sends Philippine Peso (₱), then receives USDT in this record.
+   */
   amount: number;
-  currency: 'PHP' | 'USDT';
+  currency: 'USDT';
+  userSendsDetail?: string | null;
+  userReceivesDetail?: string | null;
+  sentToReference?: string | null;
   transaction: number | Transaction;
   status: 'pending' | 'confirmed';
   method?: ('bank_transfer' | 'crypto') | null;
@@ -414,16 +420,25 @@ export interface Received {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "sending".
+ * via the `definition` "crypto-to-fiat".
  */
-export interface Sending {
+export interface CryptoToFiat {
   id: number;
+  /**
+   * Crypto to Fiat flow: user sends USDT, then receives Philippine Peso (₱) in the linked transaction.
+   */
   amount: number;
-  currency: 'PHP' | 'USDT';
+  currency: 'USDT';
+  userSendsDetail?: string | null;
+  userReceivesDetail?: string | null;
+  sentToReference?: string | null;
   transaction: number | Transaction;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   method?: ('bank_transfer' | 'crypto') | null;
   txHash?: string | null;
+  /**
+   * Optional fiat payout destination details.
+   */
   receiverDetails?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -481,12 +496,12 @@ export interface PayloadLockedDocument {
         value: number | ExchangeRate;
       } | null)
     | ({
-        relationTo: 'received';
-        value: number | Received;
+        relationTo: 'fiat-to-crypto';
+        value: number | FiatToCrypto;
       } | null)
     | ({
-        relationTo: 'sending';
-        value: number | Sending;
+        relationTo: 'crypto-to-fiat';
+        value: number | CryptoToFiat;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -672,11 +687,14 @@ export interface ExchangeRatesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "received_select".
+ * via the `definition` "fiat-to-crypto_select".
  */
-export interface ReceivedSelect<T extends boolean = true> {
+export interface FiatToCryptoSelect<T extends boolean = true> {
   amount?: T;
   currency?: T;
+  userSendsDetail?: T;
+  userReceivesDetail?: T;
+  sentToReference?: T;
   transaction?: T;
   status?: T;
   method?: T;
@@ -688,11 +706,14 @@ export interface ReceivedSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "sending_select".
+ * via the `definition` "crypto-to-fiat_select".
  */
-export interface SendingSelect<T extends boolean = true> {
+export interface CryptoToFiatSelect<T extends boolean = true> {
   amount?: T;
   currency?: T;
+  userSendsDetail?: T;
+  userReceivesDetail?: T;
+  sentToReference?: T;
   transaction?: T;
   status?: T;
   method?: T;

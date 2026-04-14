@@ -89,6 +89,7 @@ export const createExchangeEndpoint: Endpoint = {
     const networkDoc = await payload.findByID({
       collection: 'networks',
       id: network,
+      overrideAccess: true,
     })
 
     if (!networkDoc || !networkDoc.isActive) {
@@ -103,6 +104,7 @@ export const createExchangeEndpoint: Endpoint = {
       },
       limit: 1,
       depth: 0,
+      overrideAccess: true,
     })
 
     if (treasuries.length === 0) {
@@ -118,6 +120,7 @@ export const createExchangeEndpoint: Endpoint = {
         isActive: { equals: true },
       },
       limit: 1,
+      overrideAccess: true,
     })
 
     if (exchangeRateRes.docs.length === 0) {
@@ -149,6 +152,8 @@ export const createExchangeEndpoint: Endpoint = {
         treasury: treasury.id,
         status: 'pending',
       },
+      overrideAccess: true,
+      req,
     })
 
     const userSends =
@@ -187,8 +192,12 @@ export const createExchangeEndpoint: Endpoint = {
         orderId: transaction.orderId,
         type: transaction.type,
         amountPhp: transaction.amountPhp,
-        amountUsdt: transaction.amountUsdt,
-        network: transaction.network,
+        networ:
+          typeof transaction.network === 'object'
+            ? transaction.network.symbol
+            : transaction.network,
+        // amountUsdt: transaction.amountUsdt,
+        // network: transaction.network,
         targetAddress: transaction.targetAddress,
         status: transaction.status,
         createdAt: transaction.createdAt,

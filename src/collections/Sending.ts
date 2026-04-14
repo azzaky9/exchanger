@@ -1,8 +1,9 @@
+import { CRYPTO_TO_FIAT_COLLECTION_SLUG } from '@/lib/collectionSlugs'
 import type { CollectionConfig } from 'payload'
 import { markSendingReceivedEndpoint } from '../endpoints/markSendingReceived'
 
 export const Sending: CollectionConfig = {
-  slug: 'sending',
+  slug: CRYPTO_TO_FIAT_COLLECTION_SLUG,
   endpoints: [markSendingReceivedEndpoint],
   admin: {
     useAsTitle: 'id',

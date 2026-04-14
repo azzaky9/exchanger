@@ -1,7 +1,8 @@
+import { FIAT_TO_CRYPTO_COLLECTION_SLUG } from '@/lib/collectionSlugs'
 import type { CollectionConfig } from 'payload'
 
 export const Received: CollectionConfig = {
-  slug: 'received',
+  slug: FIAT_TO_CRYPTO_COLLECTION_SLUG,
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['amount', 'currency', 'status', 'method', 'createdAt'],
