@@ -13,7 +13,7 @@ import { APIError } from 'payload'
  *   - amount: number (required — amount in the source currency: PHP for fiat_to_crypto, USDT for crypto_to_fiat)
  *   - network: number (network ID, required)
  *   - targetAddress: string (destination wallet, required for fiat_to_crypto)
- *   - bankDetails: not required from client for crypto_to_fiat (loaded from BANK_ACCOUNT_NAME and BANK_ACCOUNT_NUMBER env vars)
+ *   - bankDetails: not required from client for crypto_to_fiat (loaded from BANK_NAME_LOTTO, BANK_ACCOUNT_NAME_LOTTO, and BANK_ACCOUNT_NUMBER_LOTTO env vars)
  *
  * Returns the created transaction.
  */
@@ -53,34 +53,39 @@ export const createExchangeEndpoint: Endpoint = {
       }
     }
 
+    const exchangerBankName = process.env.BANK_NAME_EXCHANGER?.trim()
     const exchangerBankAccountName = process.env.BANK_ACCOUNT_NAME_EXCHANGER?.trim()
     const exchangerBankAccountNumber = process.env.BANK_ACCOUNT_NUMBER_EXCHANGER?.trim()
 
-    if (type === 'fiat_to_crypto' && (!exchangerBankAccountName || !exchangerBankAccountNumber)) {
+    if (
+      type === 'fiat_to_crypto' &&
+      (!exchangerBankName || !exchangerBankAccountName || !exchangerBankAccountNumber)
+    ) {
       throw new APIError(
-        'Missing BANK_ACCOUNT_NAME_EXCHANGER or BANK_ACCOUNT_NUMBER_EXCHANGER environment configuration',
+        'Missing BANK_NAME_EXCHANGER, BANK_ACCOUNT_NAME_EXCHANGER, or BANK_ACCOUNT_NUMBER_EXCHANGER environment configuration',
         500,
       )
     }
 
     const exchangerBankDetails =
       type === 'fiat_to_crypto'
-        ? `Account Name: ${exchangerBankAccountName}, Account Number: ${exchangerBankAccountNumber}`
+        ? `Bank Name:\n${exchangerBankName}\n\nAccount Name:\n${exchangerBankAccountName}\n\nAccount Number:\n${exchangerBankAccountNumber}`
         : null
 
+    const bankName = process.env.BANK_NAME_LOTTO?.trim()
     const bankAccountName = process.env.BANK_ACCOUNT_NAME_LOTTO?.trim()
     const bankAccountNumber = process.env.BANK_ACCOUNT_NUMBER_LOTTO?.trim()
 
-    if (type === 'crypto_to_fiat' && (!bankAccountName || !bankAccountNumber)) {
+    if (type === 'crypto_to_fiat' && (!bankName || !bankAccountName || !bankAccountNumber)) {
       throw new APIError(
-        'Missing BANK_ACCOUNT_NAME or BANK_ACCOUNT_NUMBER environment configuration',
+        'Missing BANK_NAME_LOTTO, BANK_ACCOUNT_NAME_LOTTO, or BANK_ACCOUNT_NUMBER_LOTTO environment configuration',
         500,
       )
     }
 
     const bankDetailsFromEnv =
       type === 'crypto_to_fiat'
-        ? `Account Name:\n${bankAccountName}\n\nAccount Number:\n${bankAccountNumber}`
+        ? `Bank Name:\n${bankName}\n\nAccount Name:\n${bankAccountName}\n\nAccount Number:\n${bankAccountNumber}`
         : null
 
     const { payload } = req
@@ -175,6 +180,7 @@ export const createExchangeEndpoint: Endpoint = {
         appliedRate,
         ...(exchangerBankDetails && {
           bankDetails: {
+            bankName: exchangerBankName,
             accountName: exchangerBankAccountName,
             accountNumber: exchangerBankAccountNumber,
           },

@@ -18,6 +18,11 @@ interface ExchangeResultSuccess {
     userSends: { amount: number; currency: string }
     userReceives: { amount: number; currency: string }
     appliedRate: string
+    bankDetails?: {
+      bankName?: string
+      accountName?: string
+      accountNumber?: string
+    }
     depositAddress?: string
   }
   transaction: {
@@ -85,6 +90,26 @@ export const createExchangeBatchEndpoint: Endpoint = {
 
     const { payload } = req
     const validTypes = ['fiat_to_crypto', 'crypto_to_fiat'] as const
+    const lottoBankName = process.env.BANK_NAME_LOTTO?.trim()
+    const lottoBankAccountName = process.env.BANK_ACCOUNT_NAME_LOTTO?.trim()
+    const lottoBankAccountNumber = process.env.BANK_ACCOUNT_NUMBER_LOTTO?.trim()
+    const exchangerBankName = process.env.BANK_NAME_EXCHANGER?.trim()
+    const exchangerBankAccountName = process.env.BANK_ACCOUNT_NAME_EXCHANGER?.trim()
+    const exchangerBankAccountNumber = process.env.BANK_ACCOUNT_NUMBER_EXCHANGER?.trim()
+
+    if (!lottoBankName || !lottoBankAccountName || !lottoBankAccountNumber) {
+      throw new APIError(
+        'Missing BANK_NAME_LOTTO, BANK_ACCOUNT_NAME_LOTTO, or BANK_ACCOUNT_NUMBER_LOTTO environment configuration',
+        500,
+      )
+    }
+
+    if (!exchangerBankName || !exchangerBankAccountName || !exchangerBankAccountNumber) {
+      throw new APIError(
+        'Missing BANK_NAME_EXCHANGER, BANK_ACCOUNT_NAME_EXCHANGER, or BANK_ACCOUNT_NUMBER_EXCHANGER environment configuration',
+        500,
+      )
+    }
 
     // Fetch the active exchange rate once for the entire batch
     const exchangeRateRes = await payload.find({
@@ -212,6 +237,10 @@ export const createExchangeBatchEndpoint: Endpoint = {
             type: item.type as (typeof validTypes)[number],
             network: item.network,
             targetAddress: item.targetAddress.trim(),
+            bankDetails:
+              item.type === 'crypto_to_fiat'
+                ? `Bank Name:\n${lottoBankName}\n\nAccount Name:\n${lottoBankAccountName}\n\nAccount Number:\n${lottoBankAccountNumber}`
+                : null,
             treasury: treasury.id,
             status: 'pending',
           },
@@ -235,6 +264,15 @@ export const createExchangeBatchEndpoint: Endpoint = {
         const depositAddress =
           item.type === 'crypto_to_fiat' ? (treasury.walletAddress as string) : undefined
 
+        const exchangeBankDetails =
+          item.type === 'fiat_to_crypto'
+            ? {
+                bankName: exchangerBankName,
+                accountName: exchangerBankAccountName,
+                accountNumber: exchangerBankAccountNumber,
+              }
+            : undefined
+
         results.push({
           index: i,
           success: true,
@@ -242,6 +280,7 @@ export const createExchangeBatchEndpoint: Endpoint = {
             userSends,
             userReceives,
             appliedRate,
+            ...(exchangeBankDetails && { bankDetails: exchangeBankDetails }),
             ...(depositAddress && { depositAddress }),
           },
           transaction: {
