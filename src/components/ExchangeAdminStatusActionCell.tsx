@@ -71,8 +71,7 @@ export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentP
 
   const row = rowData as OperationRow
   const transactionRef = row.transaction
-  const transactionId =
-    typeof transactionRef === 'object' ? transactionRef?.id : transactionRef
+  const transactionId = typeof transactionRef === 'object' ? transactionRef?.id : transactionRef
 
   const initialTransaction: TransactionLite | null =
     transactionId == null
@@ -82,7 +81,8 @@ export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentP
           status: typeof transactionRef === 'object' ? transactionRef?.status : undefined,
           type: typeof transactionRef === 'object' ? transactionRef?.type : undefined,
           txHash: typeof transactionRef === 'object' ? transactionRef?.txHash : undefined,
-          invoiceImage: typeof transactionRef === 'object' ? transactionRef?.invoiceImage : undefined,
+          invoiceImage:
+            typeof transactionRef === 'object' ? transactionRef?.invoiceImage : undefined,
         }
 
   const [tx, setTx] = useState<TransactionLite | null>(initialTransaction)
@@ -546,7 +546,9 @@ export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentP
                   onClick={(event) => void handleConfirmDone(event)}
                   disabled={loadingAction}
                   style={{
-                    background: loadingAction ? 'var(--theme-elevation-300)' : 'var(--theme-success-500)',
+                    background: loadingAction
+                      ? 'var(--theme-elevation-300)'
+                      : 'var(--theme-success-500)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
