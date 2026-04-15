@@ -58,12 +58,16 @@ export const confirmTransactionArrivalEndpoint: Endpoint = {
 
     if (
       action === 'confirm_arrival' &&
+      currentStatus !== 'pending' &&
       currentStatus !== 'fiat_received' &&
       currentStatus !== 'crypto_received' &&
       currentStatus !== 'processing' &&
       currentStatus !== 'confirmed'
     ) {
-      throw new APIError('Confirm Arrival is only available after Confirm Sending.', 400)
+      throw new APIError(
+        'Confirm Arrival is only available when transaction is pending or later.',
+        400,
+      )
     }
 
     if (

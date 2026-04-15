@@ -170,7 +170,8 @@ export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentP
   const status = tx?.status
   const txType = tx?.type
 
-  const canConfirmArrival = status === 'fiat_received' || status === 'crypto_received'
+  const canConfirmArrival =
+    status === 'pending' || status === 'fiat_received' || status === 'crypto_received'
   const canConfirmDone = status === 'processing' || status === 'confirmed'
   const isCompleted = status === 'completed'
 
