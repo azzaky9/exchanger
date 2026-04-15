@@ -80,7 +80,7 @@ export const createExchangeEndpoint: Endpoint = {
 
     const bankDetailsFromEnv =
       type === 'crypto_to_fiat'
-        ? `Account Name: ${bankAccountName}, Account Number: ${bankAccountNumber}`
+        ? `Account Name:\n${bankAccountName}\n\nAccount Number:\n${bankAccountNumber}`
         : null
 
     const { payload } = req

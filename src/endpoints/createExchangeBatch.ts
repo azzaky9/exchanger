@@ -1,6 +1,6 @@
+import { randomUUID } from 'crypto'
 import type { Endpoint } from 'payload'
 import { APIError } from 'payload'
-import { randomUUID } from 'crypto'
 
 const BATCH_LIMIT = 50
 
@@ -142,7 +142,11 @@ export const createExchangeBatchEndpoint: Endpoint = {
         continue
       }
 
-      if (!item.targetAddress || typeof item.targetAddress !== 'string' || !item.targetAddress.trim()) {
+      if (
+        !item.targetAddress ||
+        typeof item.targetAddress !== 'string' ||
+        !item.targetAddress.trim()
+      ) {
         results.push({
           index: i,
           success: false,
@@ -249,9 +253,10 @@ export const createExchangeBatchEndpoint: Endpoint = {
             type: transaction.type,
             amountPhp: transaction.amountPhp,
             amountUsdt: transaction.amountUsdt as number,
-            network: typeof transaction.network === 'object'
-              ? (transaction.network as { id: number }).id
-              : (transaction.network as number),
+            network:
+              typeof transaction.network === 'object'
+                ? (transaction.network as { id: number }).id
+                : (transaction.network as number),
             targetAddress: transaction.targetAddress as string,
             status: transaction.status,
             createdAt: transaction.createdAt,

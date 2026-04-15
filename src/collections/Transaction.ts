@@ -5,6 +5,7 @@ import {
 import crypto from 'node:crypto'
 import type { CollectionConfig } from 'payload'
 import { checkSettlementEndpoint } from '../endpoints/checkSettlement'
+import { confirmTransactionArrivalEndpoint } from '../endpoints/confirmTransactionArrival'
 import { createExchangeEndpoint } from '../endpoints/createExchange'
 import { createExchangeBatchEndpoint } from '../endpoints/createExchangeBatch'
 import { financeSummaryEndpoint } from '../endpoints/finance-summary'
@@ -18,6 +19,7 @@ export const Transaction: CollectionConfig = {
     checkSettlementEndpoint,
     settlementStatusEndpoint,
     financeSummaryEndpoint,
+    confirmTransactionArrivalEndpoint,
   ],
   admin: {
     useAsTitle: 'id',
@@ -26,6 +28,7 @@ export const Transaction: CollectionConfig = {
       'id',
       'type',
       'status',
+      'confirmArrivalAction',
       'amountUsdt',
       'amountPhp',
       'profit',
@@ -45,18 +48,19 @@ export const Transaction: CollectionConfig = {
   access: {
     create: ({ req }) => Boolean(req.user), // just require auth
     read: ({ req }) => Boolean(req.user),
-    update: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
+    // Keep edit form read-only; updates should happen through controlled endpoints/workers.
+    update: () => false,
     delete: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
   },
   hooks: {
     beforeChange: [
-      async ({ data, req }) => {
+      async ({ data, req, operation, originalDoc }) => {
         if (!data) return data
 
-        // Auto-calculate USDT based on PHP and the selected exchange rate
-        if (data.amountPhp && data.exchangeRate) {
+        // Freeze and reuse rates captured at transaction creation so later edits to
+        // the exchange-rate document do not retroactively alter old transactions.
+        if (operation === 'create' && data.exchangeRate) {
           try {
-            // exchangeRate could be an ID string or object depending on depth, fetch it via local API
             const exchangeRateId =
               typeof data.exchangeRate === 'object' ? data.exchangeRate.id : data.exchangeRate
 
@@ -88,36 +92,90 @@ export const Transaction: CollectionConfig = {
               const usdtToPhpRate = Number(rateDocData.usdtToPhpRate ?? 0)
               const phpToUsdtRate = Number(rateDocData.phpToUsdtRate ?? 0)
 
-              if (usdtToPhpReferenceRate > 0 || phpToUsdtReferenceRate > 0) {
-                let amountAtOriginalRate = 0
-                let amountFinal = 0
-                let profit = 0
+              const txType = data.type as 'fiat_to_crypto' | 'crypto_to_fiat' | undefined
 
-                if (data.type === 'crypto_to_fiat') {
-                  // User sends USDT (amountPhp), receives PHP (amountUsdt)
-                  amountAtOriginalRate = data.amountPhp * usdtToPhpReferenceRate // PHP at reference rate
-                  amountFinal = data.amountPhp * usdtToPhpRate // PHP user actually receives
-                  profit = amountAtOriginalRate - amountFinal // PHP profit
-
-                  // PHP handles 2 decimal places
-                  data.amountUsdtOriginal = Math.round(amountAtOriginalRate * 100) / 100
-                  data.amountUsdt = Math.round(amountFinal * 100) / 100
-                  data.profit = Math.round(profit * 100) / 100
-                } else {
-                  // User sends PHP (amountPhp), receives USDT (amountUsdt)
-                  amountAtOriginalRate = data.amountPhp * phpToUsdtReferenceRate // USDT at reference rate
-                  amountFinal = data.amountPhp * phpToUsdtRate // USDT user actually receives
-                  profit = amountAtOriginalRate - amountFinal // USDT profit
-
-                  // USDT handles 6 decimal places
-                  data.amountUsdtOriginal = Math.round(amountAtOriginalRate * 1000000) / 1000000
-                  data.amountUsdt = Math.round(amountFinal * 1000000) / 1000000
-                  data.profit = Math.round(profit * 1000000) / 1000000
-                }
+              if (txType === 'crypto_to_fiat') {
+                data.referenceRateSnapshot = usdtToPhpReferenceRate
+                data.rateSnapshot = usdtToPhpReferenceRate
+                data.appliedRateSnapshot = usdtToPhpRate
+              } else if (txType === 'fiat_to_crypto') {
+                data.referenceRateSnapshot = phpToUsdtReferenceRate
+                data.rateSnapshot = phpToUsdtReferenceRate
+                data.appliedRateSnapshot = phpToUsdtRate
               }
             }
           } catch (err) {
             req.payload.logger.error(`Error resolving exchange rate values: ${err}`)
+          }
+        }
+
+        const amountSource = Number(data.amountPhp ?? originalDoc?.amountPhp ?? 0)
+        const txType = (data.type ?? originalDoc?.type) as
+          | 'fiat_to_crypto'
+          | 'crypto_to_fiat'
+          | undefined
+        const legacyUsdtToPhpReferenceRate = Number(
+          data.usdtToPhpReferenceRateSnapshot ?? originalDoc?.usdtToPhpReferenceRateSnapshot ?? 0,
+        )
+        const legacyPhpToUsdtReferenceRate = Number(
+          data.phpToUsdtReferenceRateSnapshot ?? originalDoc?.phpToUsdtReferenceRateSnapshot ?? 0,
+        )
+        const legacyUsdtToPhpRate = Number(
+          data.usdtToPhpRateSnapshot ?? originalDoc?.usdtToPhpRateSnapshot ?? 0,
+        )
+        const legacyPhpToUsdtRate = Number(
+          data.phpToUsdtRateSnapshot ?? originalDoc?.phpToUsdtRateSnapshot ?? 0,
+        )
+
+        const referenceRate = Number(
+          data.rateSnapshot ??
+            originalDoc?.rateSnapshot ??
+            data.referenceRateSnapshot ??
+            originalDoc?.referenceRateSnapshot ??
+            (txType === 'crypto_to_fiat'
+              ? legacyUsdtToPhpReferenceRate
+              : legacyPhpToUsdtReferenceRate),
+        )
+        const appliedRate = Number(
+          data.appliedRateSnapshot ??
+            originalDoc?.appliedRateSnapshot ??
+            (txType === 'crypto_to_fiat' ? legacyUsdtToPhpRate : legacyPhpToUsdtRate) ??
+            data.rateSnapshot ??
+            originalDoc?.rateSnapshot ??
+            0,
+        )
+
+        if (amountSource > 0 && txType && (referenceRate > 0 || appliedRate > 0)) {
+          let amountAtOriginalRate = 0
+          let amountFinal = 0
+          let profit = 0
+
+          if (txType === 'crypto_to_fiat') {
+            // User sends USDT (amountPhp), receives PHP (amountUsdt)
+            // Keep this field in USDT for both transaction types.
+            amountAtOriginalRate = amountSource
+            amountFinal = amountSource * appliedRate
+            const amountFinalAtReferenceRatePhp = amountSource * referenceRate
+            const profitPhp = amountFinalAtReferenceRatePhp - amountFinal
+
+            // Profit is always stored in USDT for consistency across transaction types.
+            // Convert PHP spread back to USDT using the reference/original rate snapshot.
+            profit = referenceRate > 0 ? profitPhp / referenceRate : 0
+
+            // USDT handles 6 decimal places
+            data.amountUsdtOriginal = Math.round(amountAtOriginalRate * 1000000) / 1000000
+            data.amountUsdt = Math.round(amountFinal * 100) / 100
+            data.profit = Math.round(profit * 1000000) / 1000000
+          } else {
+            // User sends PHP (amountPhp), receives USDT (amountUsdt)
+            amountAtOriginalRate = amountSource * referenceRate
+            amountFinal = amountSource * appliedRate
+            profit = amountAtOriginalRate - amountFinal
+
+            // USDT handles 6 decimal places
+            data.amountUsdtOriginal = Math.round(amountAtOriginalRate * 1000000) / 1000000
+            data.amountUsdt = Math.round(amountFinal * 1000000) / 1000000
+            data.profit = Math.round(profit * 1000000) / 1000000
           }
         }
 
@@ -136,7 +194,7 @@ export const Transaction: CollectionConfig = {
           amount: doc.amountUsdt as number,
           currency: 'USDT' as const,
           transaction: doc.id,
-          status: 'confirmed' as const,
+          status: 'pending' as const,
           method: 'crypto' as const,
           txHash: doc.txHash,
         }
@@ -198,16 +256,20 @@ export const Transaction: CollectionConfig = {
 
           if (isFiatToCrypto) {
             if (receivedRecordId) {
+              const receivedUpdateData = {
+                currency: fiatToCryptoReceivedData.currency,
+                transaction: fiatToCryptoReceivedData.transaction,
+                method: fiatToCryptoReceivedData.method,
+                txHash: fiatToCryptoReceivedData.txHash,
+                ...(typeof fiatToCryptoReceivedData.amount === 'number'
+                  ? { amount: fiatToCryptoReceivedData.amount }
+                  : {}),
+              }
+
               await payload.update({
                 collection: FIAT_TO_CRYPTO_COLLECTION_SLUG,
                 id: receivedRecordId,
-                data: {
-                  amount: fiatToCryptoReceivedData.amount,
-                  currency: fiatToCryptoReceivedData.currency,
-                  transaction: fiatToCryptoReceivedData.transaction,
-                  method: fiatToCryptoReceivedData.method,
-                  txHash: fiatToCryptoReceivedData.txHash,
-                },
+                data: receivedUpdateData,
                 req,
                 overrideAccess: true,
               })
@@ -233,16 +295,20 @@ export const Transaction: CollectionConfig = {
             }
           } else {
             if (sendingRecordId) {
+              const sendingUpdateData = {
+                currency: cryptoToFiatSendingData.currency,
+                transaction: cryptoToFiatSendingData.transaction,
+                method: cryptoToFiatSendingData.method,
+                txHash: cryptoToFiatSendingData.txHash,
+                ...(typeof cryptoToFiatSendingData.amount === 'number'
+                  ? { amount: cryptoToFiatSendingData.amount }
+                  : {}),
+              }
+
               await payload.update({
                 collection: CRYPTO_TO_FIAT_COLLECTION_SLUG,
                 id: sendingRecordId,
-                data: {
-                  amount: cryptoToFiatSendingData.amount,
-                  currency: cryptoToFiatSendingData.currency,
-                  transaction: cryptoToFiatSendingData.transaction,
-                  method: cryptoToFiatSendingData.method,
-                  txHash: cryptoToFiatSendingData.txHash,
-                },
+                data: sendingUpdateData,
                 req,
                 overrideAccess: true,
               })
@@ -268,6 +334,34 @@ export const Transaction: CollectionConfig = {
             }
           }
         }
+      },
+    ],
+    beforeDelete: [
+      async ({ req, id }) => {
+        if (!id) return
+
+        // Remove dependent operation records first to avoid FK/relation delete conflicts.
+        await req.payload.delete({
+          collection: FIAT_TO_CRYPTO_COLLECTION_SLUG,
+          where: {
+            transaction: {
+              equals: id,
+            },
+          },
+          req,
+          overrideAccess: true,
+        })
+
+        await req.payload.delete({
+          collection: CRYPTO_TO_FIAT_COLLECTION_SLUG,
+          where: {
+            transaction: {
+              equals: id,
+            },
+          },
+          req,
+          overrideAccess: true,
+        })
       },
     ],
   },
@@ -393,11 +487,11 @@ export const Transaction: CollectionConfig = {
         },
         {
           name: 'bankDetails',
-          type: 'text',
+          type: 'textarea',
           label: 'Bank Details',
           admin: {
             condition: (data) => data.type === 'crypto_to_fiat',
-            description: 'Bank Name, Account Number, and Account Name',
+            description: 'Structured payout details (Account Name and Account Number).',
             width: '50%',
           },
           validate: (val: string | null | undefined, { data }: { data: { type?: string } }) => {
@@ -415,18 +509,49 @@ export const Transaction: CollectionConfig = {
         {
           name: 'amountUsdtOriginal',
           type: 'number',
-          label: 'Calculated Amount (Original Rate)',
+          label: 'Amount Sent to Exchange (USDT)',
           access: {
             read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
           },
+          hooks: {
+            afterRead: [
+              ({ value, siblingData }) => {
+                const txType = siblingData?.type as 'fiat_to_crypto' | 'crypto_to_fiat' | undefined
+
+                // View-only normalization for legacy rows that stored PHP in amountUsdtOriginal.
+                if (txType === 'crypto_to_fiat') {
+                  const amountSentUsdt = Number(siblingData?.amountPhp ?? 0)
+                  if (amountSentUsdt > 0) {
+                    return Math.round(amountSentUsdt * 1000000) / 1000000
+                  }
+
+                  const originalValue = Number(value ?? 0)
+                  const referenceRate = Number(
+                    siblingData?.referenceRateSnapshot ??
+                      siblingData?.usdtToPhpReferenceRateSnapshot ??
+                      0,
+                  )
+
+                  if (originalValue > 0 && referenceRate > 0) {
+                    return Math.round((originalValue / referenceRate) * 1000000) / 1000000
+                  }
+                }
+
+                const numeric = Number(value ?? 0)
+                if (numeric > 0) return Math.round(numeric * 1000000) / 1000000
+
+                return value
+              },
+            ],
+          },
           admin: {
             step: 0.000001,
-            description: 'Auto-computed at the reference/original exchange rate',
+            description: 'USDT amount sent to exchange at original/reference context.',
             readOnly: true,
             width: '50%',
             components: {
               Label: '/components/DynamicAmountLabel#AmountOriginalLabel',
-              Cell: '/components/AmountReceivedCell#AmountReceivedCell',
+              Cell: '/components/AmountSentToExchangeUsdtCell#AmountSentToExchangeUsdtCell',
             },
           },
         },
@@ -467,6 +592,84 @@ export const Transaction: CollectionConfig = {
       ],
     },
     {
+      type: 'row',
+      fields: [
+        {
+          name: 'rateSnapshot',
+          type: 'number',
+          label: 'Rate',
+          admin: {
+            readOnly: true,
+            width: '50%',
+            components: {
+              Label: '/components/DynamicAmountLabel#RateLabel',
+              Field: '/components/RateSnapshotField#RateSnapshotField',
+              Cell: '/components/RateSnapshotCell#RateSnapshotCell',
+            },
+          },
+        },
+        {
+          name: 'referenceRateSnapshot',
+          type: 'number',
+          admin: {
+            hidden: true,
+            readOnly: true,
+            condition: () => false,
+          },
+        },
+        {
+          name: 'appliedRateSnapshot',
+          type: 'number',
+          admin: {
+            hidden: true,
+            readOnly: true,
+            condition: () => false,
+          },
+        },
+      ],
+    },
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'usdtToPhpReferenceRateSnapshot',
+          type: 'number',
+          admin: {
+            hidden: true,
+            readOnly: true,
+            condition: () => false,
+          },
+        },
+        {
+          name: 'usdtToPhpRateSnapshot',
+          type: 'number',
+          admin: {
+            hidden: true,
+            readOnly: true,
+            condition: () => false,
+          },
+        },
+        {
+          name: 'phpToUsdtReferenceRateSnapshot',
+          type: 'number',
+          admin: {
+            hidden: true,
+            readOnly: true,
+            condition: () => false,
+          },
+        },
+        {
+          name: 'phpToUsdtRateSnapshot',
+          type: 'number',
+          admin: {
+            hidden: true,
+            readOnly: true,
+            condition: () => false,
+          },
+        },
+      ],
+    },
+    {
       name: 'exchangeRateCalculator',
       type: 'ui',
       admin: {
@@ -494,11 +697,30 @@ export const Transaction: CollectionConfig = {
             width: '100%',
             components: {
               Label: '/components/DynamicAmountLabel#ProfitLabel',
-              Cell: '/components/AmountReceivedCell#AmountReceivedCell',
+              Cell: '/components/ProfitUsdtCell#ProfitUsdtCell',
             },
           },
         },
       ],
+    },
+    {
+      name: 'confirmArrivalAction',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        condition: (data, _, { user }) =>
+          Boolean(data?.id) &&
+          Boolean(user?.roles?.includes('admin')) &&
+          (data?.status === 'fiat_received' ||
+            data?.status === 'crypto_received' ||
+            data?.status === 'processing' ||
+            data?.status === 'confirmed' ||
+            data?.status === 'completed'),
+        components: {
+          Field: '/components/ConfirmArrivalStatusButton#ConfirmArrivalStatusButton',
+          Cell: '/components/ConfirmArrivalStatusCell#ConfirmArrivalStatusCell',
+        },
+      },
     },
     {
       name: 'profitPercentage',
@@ -563,6 +785,18 @@ export const Transaction: CollectionConfig = {
       },
     },
     {
+      name: 'invoiceImage',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Invoice Image',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => Boolean(data?.id),
+        description: 'Attached from Confirm Sending or Confirm Done actions.',
+      },
+    },
+    {
       name: 'notes',
       type: 'textarea',
       label: 'Description / Notes',
@@ -584,9 +818,7 @@ export const Transaction: CollectionConfig = {
       type: 'relationship',
       relationTo: CRYPTO_TO_FIAT_COLLECTION_SLUG,
       admin: {
-        position: 'sidebar',
-        readOnly: true,
-        condition: (data) => Boolean(data?.id),
+        hidden: true,
       },
     },
   ],

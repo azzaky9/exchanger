@@ -61,9 +61,9 @@ export function AmountLabel() {
 export function AmountOriginalLabel() {
   return (
     <DynamicLabel
-      fiatLabel="Amount sent (Original Rate) - USDT"
-      cryptoLabel="Amount sent (Original Rate) - ₱"
-      staticLabel="Original Rate (USDT/₱)"
+      fiatLabel="Amount Sent to Exchange (USDT)"
+      cryptoLabel="Amount Sent to Exchange (USDT)"
+      staticLabel="Amount Sent to Exchange (USDT)"
     />
   )
 }
@@ -72,9 +72,20 @@ export function AmountOriginalLabel() {
 export function AmountFinalLabel() {
   return (
     <DynamicLabel
-      fiatLabel="Total Amount sent (USDT)"
-      cryptoLabel="Total Amount sent (₱ Peso)"
+      fiatLabel="Total Amount sentto users (USDT)"
+      cryptoLabel="Total Amount sent users (₱ Peso)"
       staticLabel="Total Amount sent"
+    />
+  )
+}
+
+/** Rate snapshot field — dynamic direction label, single field in transaction detail. */
+export function RateLabel() {
+  return (
+    <DynamicLabel
+      fiatLabel="Rate (USDT per PHP)"
+      cryptoLabel="Rate (PHP per USDT)"
+      staticLabel="Rate"
     />
   )
 }
@@ -82,6 +93,10 @@ export function AmountFinalLabel() {
 /** Profit field — form: "Profit (USDT)" ↔ "Profit (₱ Peso)" | table: static label */
 export function ProfitLabel() {
   return (
-    <DynamicLabel fiatLabel="Profit (USDT)" cryptoLabel="Profit (₱ Peso)" staticLabel="Profit" />
+    <DynamicLabel
+      fiatLabel="Profit (USDT)"
+      cryptoLabel="Profit (USDT)"
+      staticLabel="Profit (USDT)"
+    />
   )
 }

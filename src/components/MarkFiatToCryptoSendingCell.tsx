@@ -1,84 +1,144 @@
 'use client'
 
-import { CRYPTO_TO_FIAT_COLLECTION_SLUG } from '@/lib/collectionSlugs'
+import { FIAT_TO_CRYPTO_COLLECTION_SLUG } from '@/lib/collectionSlugs'
 import { useAuth } from '@payloadcms/ui'
 import type { DefaultCellComponentProps } from 'payload'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-type SendingRow = {
+type FiatToCryptoRow = {
   id?: number | string
-  status?: 'pending' | 'confirmed' | 'processing' | 'completed' | 'failed'
+  status?: 'pending' | 'confirmed' | 'processing' | 'completed'
 }
 
-export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) {
-  const { user } = useAuth()
+type MediaCreateResponse = {
+  doc?: { id?: number | string }
+  id?: number | string
+  message?: string
+}
 
-  const row = rowData as SendingRow
+type MarkSendingResponse = {
+  success?: boolean
+  message?: string
+}
+
+export function MarkFiatToCryptoSendingCell({ rowData }: DefaultCellComponentProps) {
+  const { user } = useAuth()
+  if (!(user as { roles?: string[] } | null)?.roles?.includes('user')) return null
+
+  const row = rowData as FiatToCryptoRow
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(
     row.status === 'confirmed' || row.status === 'processing' || row.status === 'completed',
   )
   const [showModal, setShowModal] = useState(false)
-  const [txHashInput, setTxHashInput] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const sendingId = row.id
-  if (!sendingId) return null
-
-  const isBrowser = typeof window !== 'undefined'
+  const recordId = row.id
+  if (!recordId) return null
 
   if (done) {
     return <span style={{ color: 'var(--theme-success-500)', fontSize: '0.8rem' }}>Done</span>
   }
 
-  const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    // Prevent default row click navigation so action can run directly in-table.
-    event.preventDefault()
-    event.stopPropagation()
+  const uploadInvoiceImage = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append(
+      '_payload',
+      JSON.stringify({
+        alt: `fiat-to-crypto-invoice-${recordId}-${Date.now()}`,
+      }),
+    )
 
-    setShowModal(true)
-    setError(null)
+    const uploadRes = await fetch('/api/media', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    })
+
+    const uploadData = (await uploadRes.json()) as MediaCreateResponse
+
+    if (!uploadRes.ok) {
+      throw new Error(uploadData?.message || 'Failed to upload invoice image')
+    }
+
+    const mediaId = uploadData?.doc?.id ?? uploadData?.id
+
+    if (typeof mediaId !== 'string' && typeof mediaId !== 'number') {
+      throw new Error('Invoice upload succeeded but media id was not returned')
+    }
+
+    return mediaId
   }
 
   const handleConfirm = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
 
+    if (!selectedFile) {
+      setError('Please upload an invoice image before confirming.')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
-    const txHash = txHashInput.trim()
-
     try {
-      const res = await fetch(`/api/${CRYPTO_TO_FIAT_COLLECTION_SLUG}/${sendingId}/mark-received`, {
+      const mediaId = await uploadInvoiceImage(selectedFile)
+
+      const res = await fetch(`/api/${FIAT_TO_CRYPTO_COLLECTION_SLUG}/${recordId}/mark-sending`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(txHash ? { txHash } : {}),
+        body: JSON.stringify({ invoiceImage: mediaId }),
       })
-      const data = await res.json()
+
+      const data = (await res.json()) as MarkSendingResponse
+
       if (!res.ok || !data.success) {
-        throw new Error(data?.message || 'Failed to update')
+        throw new Error(data?.message || 'Failed to mark as sending')
       }
+
       setDone(true)
       setShowModal(false)
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to update')
+      setTimeout(() => window.location.reload(), 500)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to mark as sending')
       setLoading(false)
     }
   }
 
-  if (!(user as { roles?: string[] } | null)?.roles?.includes('user')) return null
+  const openModal = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setShowModal(true)
+    setError(null)
+  }
+
+  const closeModal = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (loading) return
+
+    setShowModal(false)
+    setSelectedFile(null)
+    setError(null)
+  }
+
+  const isBrowser = typeof window !== 'undefined'
 
   return (
     <>
       <button
         type="button"
-        onClick={handleClick}
+        onClick={openModal}
         disabled={loading}
         style={{
-          background: loading ? 'var(--theme-elevation-300)' : 'var(--theme-success-500)',
+          background: 'var(--theme-success-500)',
           color: 'white',
           border: 'none',
           borderRadius: '6px',
@@ -87,9 +147,10 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
           fontWeight: 600,
           cursor: loading ? 'not-allowed' : 'pointer',
           whiteSpace: 'nowrap',
+          opacity: loading ? 0.7 : 1,
         }}
       >
-        {loading ? 'Updating...' : 'Confirm Sending'}
+        Mark as Sending
       </button>
 
       {showModal &&
@@ -101,7 +162,7 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
             onClick={(event) => {
               if (event.target === event.currentTarget && !loading) {
                 setShowModal(false)
-                setTxHashInput('')
+                setSelectedFile(null)
                 setError(null)
               }
             }}
@@ -130,19 +191,48 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
             >
               <h4 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Confirm Sending</h4>
               <p style={{ marginTop: 0, marginBottom: '0.75rem', fontSize: '0.85rem' }}>
-                Add txHash if available, or confirm without it.
+                Upload invoice image before confirming this fiat send.
               </p>
 
               <input
-                type="text"
-                value={txHashInput}
-                placeholder="Enter txHash (optional)"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
                 onChange={(event) => {
-                  setTxHashInput(event.target.value)
+                  const file = event.target.files?.[0] ?? null
+                  setSelectedFile(file)
                   setError(null)
                 }}
+                style={{ display: 'none' }}
+              />
+
+              <input
+                type="text"
+                readOnly
+                value={selectedFile?.name || ''}
+                placeholder="No file selected"
                 style={{ marginBottom: '0.75rem', width: '100%' }}
               />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                style={{
+                  marginBottom: '0.75rem',
+                  border: '1px solid var(--theme-elevation-300)',
+                  background: 'transparent',
+                  borderRadius: '6px',
+                  padding: '0.4rem 0.7rem',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Choose Invoice File
+              </button>
+
+              {selectedFile && (
+                <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem' }}>{selectedFile.name}</p>
+              )}
 
               {error && (
                 <p
@@ -159,14 +249,7 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    if (loading) return
-                    setShowModal(false)
-                    setTxHashInput('')
-                    setError(null)
-                  }}
+                  onClick={closeModal}
                   disabled={loading}
                   style={{
                     border: '1px solid var(--theme-elevation-300)',
@@ -181,14 +264,14 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  disabled={loading}
+                  disabled={loading || !selectedFile}
                   style={{
                     background: loading ? 'var(--theme-elevation-300)' : 'var(--theme-success-500)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
                     padding: '0.4rem 0.8rem',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: loading || !selectedFile ? 'not-allowed' : 'pointer',
                   }}
                 >
                   {loading ? 'Submitting...' : 'Confirm'}

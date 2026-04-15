@@ -1,20 +1,20 @@
 'use client'
-import type { DefaultCellComponentProps } from 'payload'
 import { useAuth } from '@payloadcms/ui'
+import type { DefaultCellComponentProps } from 'payload'
 
 type RowData = {
   type?: 'fiat_to_crypto' | 'crypto_to_fiat'
   profit?: number | null
   amountUsdtOriginal?: number | null
+  amountPhp?: number | null
 }
 
 /**
  * List-view cell that displays the profit as a percentage of the reference-rate amount.
  *
- * Formula: (profit / amountUsdtOriginal) × 100
- *
- * Works for both transaction types since profit and amountUsdtOriginal are always
- * expressed in the same currency (USDT for fiat→crypto, PHP for crypto→fiat).
+ * Formula: (profit / baselineUsdt) × 100
+ * - fiat_to_crypto baseline: amountUsdtOriginal (already USDT)
+ * - crypto_to_fiat baseline: amountPhp (source amount field stores USDT)
  */
 export function ProfitPercentageCell({ rowData }: DefaultCellComponentProps) {
   const { user } = useAuth()
@@ -24,7 +24,7 @@ export function ProfitPercentageCell({ rowData }: DefaultCellComponentProps) {
 
   const row = rowData as RowData
   const profit = typeof row.profit !== 'undefined' ? row.profit : 0
-  const base = row.amountUsdtOriginal
+  const base = row.type === 'crypto_to_fiat' ? row.amountPhp : row.amountUsdtOriginal
 
   if (profit == null || base == null || base === 0) {
     return <span style={{ color: 'var(--theme-text-muted, #888)' }}>—</span>

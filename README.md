@@ -2,6 +2,37 @@
 
 A fiat-to-crypto and crypto-to-fiat exchange platform built with Payload CMS and Next.js. Users submit the USDT amount they need, an admin sets the exchange rate and markup, and the system processes on-chain transfers via configurable blockchain networks.
 
+## Runtime Setup
+
+This project uses Bun for package management and script execution.
+
+### Install and run
+
+```bash
+bun install
+bun run dev
+```
+
+### Required environment variables
+
+```bash
+PAYLOAD_SECRET=your_payload_secret
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+```
+
+### Optional S3 storage for media uploads
+
+When the S3 variables below are set, Payload stores media in your S3 bucket. If they are not set, Payload falls back to local storage.
+
+```bash
+S3_BUCKET=your-bucket-name
+S3_ACCESS_KEY=your-access-key
+S3_SECRET_KEY=your-secret-key
+S3_HOST=sgp1.vultrobjects.com
+S3_HOST_BUCKET=exchange.sgp1.vultrobjects.com
+S3_FORCE_PATH_STYLE=false
+```
+
 ---
 
 ## API Integration Guide

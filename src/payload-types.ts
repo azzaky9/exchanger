@@ -285,11 +285,11 @@ export interface Transaction {
    */
   targetAddress?: string | null;
   /**
-   * Bank Name, Account Number, and Account Name
+   * Structured payout details (Account Name and Account Number).
    */
   bankDetails?: string | null;
   /**
-   * Auto-computed at the reference/original exchange rate
+   * USDT amount sent to exchange at original/reference context.
    */
   amountUsdtOriginal?: number | null;
   /**
@@ -300,6 +300,13 @@ export interface Transaction {
    * Select the exchange rate to use for this transaction
    */
   exchangeRate: number | ExchangeRate;
+  rateSnapshot?: number | null;
+  referenceRateSnapshot?: number | null;
+  appliedRateSnapshot?: number | null;
+  usdtToPhpReferenceRateSnapshot?: number | null;
+  usdtToPhpRateSnapshot?: number | null;
+  phpToUsdtReferenceRateSnapshot?: number | null;
+  phpToUsdtRateSnapshot?: number | null;
   /**
    * Calculated difference based on transaction type
    */
@@ -324,6 +331,10 @@ export interface Transaction {
    * Optional reference to a fiat settlement
    */
   fiatSettlementId?: string | null;
+  /**
+   * Attached from Confirm Sending or Confirm Done actions.
+   */
+  invoiceImage?: (number | null) | Media;
   /**
    * Optional notes for context when this transaction is created manually in admin or through API integration.
    */
@@ -407,10 +418,19 @@ export interface FiatToCrypto {
   amount: number;
   currency: 'USDT';
   userSendsDetail?: string | null;
+  amountSentToExchangeOriginalRateDetail?: string | null;
+  amountReceivedFromExchangeDetail?: string | null;
+  rateDetail?: string | null;
+  profitAmountDetail?: string | null;
+  profitPercentageDetail?: string | null;
   userReceivesDetail?: string | null;
   sentToReference?: string | null;
   transaction: number | Transaction;
-  status: 'pending' | 'confirmed';
+  status: 'pending' | 'confirmed' | 'processing' | 'completed';
+  /**
+   * Required after confirming fiat send.
+   */
+  invoiceImage?: (number | null) | Media;
   method?: ('bank_transfer' | 'crypto') | null;
   referenceNumber?: string | null;
   senderAddress?: string | null;
@@ -430,11 +450,19 @@ export interface CryptoToFiat {
   amount: number;
   currency: 'USDT';
   userSendsDetail?: string | null;
+  amountSentToExchangeOriginalRateDetail?: string | null;
+  amountReceivedFromExchangeDetail?: string | null;
+  rateDetail?: string | null;
+  profitAmountDetail?: string | null;
+  profitPercentageDetail?: string | null;
   userReceivesDetail?: string | null;
   sentToReference?: string | null;
   transaction: number | Transaction;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'confirmed' | 'processing' | 'completed' | 'failed';
   method?: ('bank_transfer' | 'crypto') | null;
+  /**
+   * Optional blockchain hash once crypto send is confirmed.
+   */
   txHash?: string | null;
   /**
    * Optional fiat payout destination details.
@@ -635,12 +663,20 @@ export interface TransactionsSelect<T extends boolean = true> {
   amountUsdtOriginal?: T;
   amountUsdt?: T;
   exchangeRate?: T;
+  rateSnapshot?: T;
+  referenceRateSnapshot?: T;
+  appliedRateSnapshot?: T;
+  usdtToPhpReferenceRateSnapshot?: T;
+  usdtToPhpRateSnapshot?: T;
+  phpToUsdtReferenceRateSnapshot?: T;
+  phpToUsdtRateSnapshot?: T;
   profit?: T;
   gasFee?: T;
   txHash?: T;
   batch?: T;
   failReason?: T;
   fiatSettlementId?: T;
+  invoiceImage?: T;
   notes?: T;
   receivedRecord?: T;
   sendingRecord?: T;
@@ -693,10 +729,16 @@ export interface FiatToCryptoSelect<T extends boolean = true> {
   amount?: T;
   currency?: T;
   userSendsDetail?: T;
+  amountSentToExchangeOriginalRateDetail?: T;
+  amountReceivedFromExchangeDetail?: T;
+  rateDetail?: T;
+  profitAmountDetail?: T;
+  profitPercentageDetail?: T;
   userReceivesDetail?: T;
   sentToReference?: T;
   transaction?: T;
   status?: T;
+  invoiceImage?: T;
   method?: T;
   referenceNumber?: T;
   senderAddress?: T;
@@ -712,6 +754,11 @@ export interface CryptoToFiatSelect<T extends boolean = true> {
   amount?: T;
   currency?: T;
   userSendsDetail?: T;
+  amountSentToExchangeOriginalRateDetail?: T;
+  amountReceivedFromExchangeDetail?: T;
+  rateDetail?: T;
+  profitAmountDetail?: T;
+  profitPercentageDetail?: T;
   userReceivesDetail?: T;
   sentToReference?: T;
   transaction?: T;

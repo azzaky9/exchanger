@@ -2,6 +2,10 @@ import { CRYPTO_TO_FIAT_COLLECTION_SLUG } from '@/lib/collectionSlugs'
 import type { Transaction as TransactionDoc } from '@/payload-types'
 import { APIError, type Endpoint } from 'payload'
 
+type MarkReceivedRequestBody = {
+  txHash?: string
+}
+
 export const markSendingReceivedEndpoint: Endpoint = {
   path: '/:id/mark-received',
   method: 'post',
@@ -23,6 +27,13 @@ export const markSendingReceivedEndpoint: Endpoint = {
 
     if (!sendingId) {
       throw new APIError('Missing sending id', 400)
+    }
+
+    let body: MarkReceivedRequestBody = {}
+    try {
+      body = (await req.json?.()) as MarkReceivedRequestBody
+    } catch {
+      body = {}
     }
 
     try {
@@ -51,6 +62,16 @@ export const markSendingReceivedEndpoint: Endpoint = {
         req,
       })
 
+      const txHash =
+        typeof transactionDoc.txHash === 'string' ? transactionDoc.txHash.trim() : undefined
+
+      const txHashFromBody = typeof body.txHash === 'string' ? body.txHash.trim() : ''
+      const resolvedTxHash = txHashFromBody || txHash
+
+      if (transactionDoc.type === 'fiat_to_crypto' && !resolvedTxHash) {
+        throw new APIError('txHash is required before confirming sending.', 400)
+      }
+
       const nextTransactionStatus: TransactionDoc['status'] =
         transactionDoc.type === 'fiat_to_crypto' ? 'fiat_received' : 'crypto_received'
 
@@ -58,7 +79,8 @@ export const markSendingReceivedEndpoint: Endpoint = {
         collection: CRYPTO_TO_FIAT_COLLECTION_SLUG,
         id: sendingId,
         data: {
-          status: 'completed',
+          status: 'confirmed',
+          ...(txHashFromBody ? { txHash: txHashFromBody } : {}),
         },
         req,
       })
@@ -68,18 +90,24 @@ export const markSendingReceivedEndpoint: Endpoint = {
         id: transactionRecordId,
         data: {
           status: nextTransactionStatus,
+          ...(txHashFromBody ? { txHash: txHashFromBody } : {}),
         },
         req,
       })
 
       return Response.json({
         success: true,
-        message: `Transaction marked as ${nextTransactionStatus.replace('_', ' ')}.`,
+        message: `Sending confirmed. Transaction marked as ${nextTransactionStatus.replace('_', ' ')}.`,
         transactionStatus: updatedTransaction.status,
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to mark as received'
-      return Response.json({ success: false, message }, { status: 500 })
+      const status =
+        error instanceof APIError
+          ? error.status || (error as { statusCode?: number }).statusCode || 400
+          : 500
+
+      return Response.json({ success: false, message }, { status })
     }
   },
 }
