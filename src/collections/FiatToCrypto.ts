@@ -14,6 +14,7 @@ export const Received: CollectionConfig = {
       beforeListTable: [
         '/components/ExchangeOperationsSummaryBanner#ExchangeOperationsSummaryBanner',
         '/components/ListRowClickToDetail#ListRowClickToDetail',
+        '/components/RowHoverHighlight#RowHoverHighlight',
       ],
     },
     defaultColumns: [
@@ -32,7 +33,7 @@ export const Received: CollectionConfig = {
       'transaction',
       'exchangeAction',
     ],
-    group: 'Operations',
+    group: 'Transactions',
     hidden: ({ user }) => !(user?.roles?.includes('user') || user?.roles?.includes('admin')),
   },
   endpoints: [markFiatToCryptoSendingEndpoint],

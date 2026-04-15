@@ -33,6 +33,7 @@ export const Sending: CollectionConfig = {
       beforeListTable: [
         '/components/ExchangeOperationsSummaryBanner#ExchangeOperationsSummaryBanner',
         '/components/ListRowClickToDetail#ListRowClickToDetail',
+        '/components/RowHoverHighlight#RowHoverHighlight',
       ],
     },
     defaultColumns: [
@@ -51,7 +52,7 @@ export const Sending: CollectionConfig = {
       'transaction',
       'exchangeAction',
     ],
-    group: 'Operations',
+    group: 'Transactions',
     hidden: ({ user }) => !(user?.roles?.includes('user') || user?.roles?.includes('admin')),
   },
   access: {
