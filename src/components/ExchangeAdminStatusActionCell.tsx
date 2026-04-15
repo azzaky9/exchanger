@@ -239,7 +239,7 @@ export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentP
     )
 
     setOpen(false)
-      refreshAfterSuccess()
+    refreshAfterSuccess()
   }
 
   const runAction = async (
