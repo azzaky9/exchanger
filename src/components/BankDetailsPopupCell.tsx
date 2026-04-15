@@ -26,11 +26,17 @@ function parseBankDetails(raw: string) {
 
   if (lines.length === 0) return null
 
+  let bankName = ''
   let accountName = ''
   let accountNumber = ''
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
+
+    if (line.toLowerCase().startsWith('bank name')) {
+      const inline = line.split(':').slice(1).join(':').trim()
+      bankName = inline || lines[i + 1] || ''
+    }
 
     if (line.toLowerCase().startsWith('account name')) {
       const inline = line.split(':').slice(1).join(':').trim()
@@ -44,6 +50,7 @@ function parseBankDetails(raw: string) {
   }
 
   return {
+    bankName,
     accountName,
     accountNumber,
     raw,
@@ -63,7 +70,7 @@ export function BankDetailsPopupCell({ cellData }: DefaultCellComponentProps) {
     return <span style={{ color: 'var(--theme-text-muted, #888)' }}>-</span>
   }
 
-  if (!parsed?.accountName && !parsed?.accountNumber) {
+  if (!parsed?.bankName && !parsed?.accountName && !parsed?.accountNumber) {
     return <span>{value}</span>
   }
 
@@ -147,6 +154,12 @@ export function BankDetailsPopupCell({ cellData }: DefaultCellComponentProps) {
                   marginBottom: '0.8rem',
                 }}
               >
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '0.72rem', opacity: 0.7, marginBottom: '0.2rem' }}>
+                    Bank Name
+                  </div>
+                  <div style={{ fontWeight: 600 }}>{parsed.bankName || '-'}</div>
+                </div>
                 <div style={{ marginBottom: '0.5rem' }}>
                   <div style={{ fontSize: '0.72rem', opacity: 0.7, marginBottom: '0.2rem' }}>
                     Account Name
