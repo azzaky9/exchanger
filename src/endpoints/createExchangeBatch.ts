@@ -198,12 +198,9 @@ export const createExchangeBatchEndpoint: Endpoint = {
         const treasury = treasuries[0]
 
         // ── Calculate amounts ──────────────────────────────────────────────
-        let amountPhp = 0
-        if (item.type === 'fiat_to_crypto') {
-          amountPhp = item.amount
-        } else {
-          amountPhp = item.amount * (currentRate.usdtToPhpRate as number)
-        }
+        // Keep the source amount in amountPhp for both flows so the transaction
+        // hook can compute the final PHP/USDT payout correctly.
+        const amountPhp = item.amount
 
         // ── Create the transaction ─────────────────────────────────────────
         const transaction = await payload.create({
@@ -228,7 +225,7 @@ export const createExchangeBatchEndpoint: Endpoint = {
         const userReceives =
           item.type === 'fiat_to_crypto'
             ? { amount: transaction.amountUsdt as number, currency: 'USDT' }
-            : { amount: transaction.amountPhp, currency: 'PHP' }
+            : { amount: transaction.amountUsdt as number, currency: 'PHP' }
 
         const appliedRate =
           item.type === 'fiat_to_crypto'

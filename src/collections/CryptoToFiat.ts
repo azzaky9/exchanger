@@ -165,8 +165,12 @@ export const Sending: CollectionConfig = {
       type: 'text',
       virtual: true,
       label: 'Amount Sent to Exchange ',
+      access: {
+        read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
+      },
       admin: {
         readOnly: true,
+        condition: (_, __, { user }) => Boolean(user?.roles?.includes('admin')),
       },
       hooks: {
         afterRead: [
@@ -206,8 +210,12 @@ export const Sending: CollectionConfig = {
       type: 'text',
       virtual: true,
       label: 'Amount Received from Exchange ',
+      access: {
+        read: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
+      },
       admin: {
         readOnly: true,
+        condition: (_, __, { user }) => Boolean(user?.roles?.includes('admin')),
       },
       hooks: {
         afterRead: [

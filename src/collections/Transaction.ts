@@ -200,7 +200,7 @@ export const Transaction: CollectionConfig = {
         }
 
         const cryptoToFiatSendingData = {
-          amount: doc.amountPhp as number,
+          amount: (doc.amountUsdtOriginal as number) ?? (doc.amountPhp as number),
           currency: 'USDT' as const,
           transaction: doc.id,
           status: 'pending' as const,

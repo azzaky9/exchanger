@@ -128,15 +128,9 @@ export const createExchangeEndpoint: Endpoint = {
     }
     const currentRate = exchangeRateRes.docs[0]
 
-    // Calculate amountPhp based on the transaction type and source amount
-    let amountPhp = 0
-    if (type === 'fiat_to_crypto') {
-      // User is sending PHP
-      amountPhp = amount
-    } else if (type === 'crypto_to_fiat') {
-      // User is sending USDT, they get PHP based on the usdtToPhpRate
-      amountPhp = amount * (currentRate.usdtToPhpRate as number)
-    }
+    // Store the source amount in amountPhp for both flows.
+    // crypto_to_fiat uses amountPhp as the source USDT amount inside the transaction hook.
+    const amountPhp = amount
 
     // Create the transaction
     const transaction = await payload.create({
@@ -164,7 +158,7 @@ export const createExchangeEndpoint: Endpoint = {
     const userReceives =
       type === 'fiat_to_crypto'
         ? { amount: transaction.amountUsdt, currency: 'USDT' }
-        : { amount: transaction.amountPhp, currency: 'PHP' }
+        : { amount: transaction.amountUsdt, currency: 'PHP' }
 
     const appliedRate =
       type === 'fiat_to_crypto'
@@ -192,6 +186,7 @@ export const createExchangeEndpoint: Endpoint = {
         orderId: transaction.orderId,
         type: transaction.type,
         amountPhp: transaction.amountPhp,
+        amountUsdt: transaction.amountUsdt,
         networ:
           typeof transaction.network === 'object'
             ? transaction.network.symbol
