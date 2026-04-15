@@ -84,8 +84,6 @@ export function ConfirmArrivalStatusButton() {
   const isComplete = currentStatus === 'completed'
   const isBrowser = typeof window !== 'undefined'
 
-  if (!id) return null
-
   useEffect(() => {
     const fieldStatus = statusField?.value as string | undefined
     if (fieldStatus && fieldStatus !== localStatus) {
@@ -228,6 +226,8 @@ export function ConfirmArrivalStatusButton() {
 
     await submitAction('confirm_done')
   }
+
+  if (!id) return null
 
   return (
     <div style={{ marginBottom: '0.85rem' }}>
