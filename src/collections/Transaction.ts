@@ -153,8 +153,11 @@ export const Transaction: CollectionConfig = {
           if (txType === 'crypto_to_fiat') {
             // User sends USDT (amountPhp), receives PHP (amountUsdt)
             // Keep this field in USDT for both transaction types.
-            amountAtOriginalRate = amountSource
+            // For crypto_to_fiat, this tracks the original-rate USDT equivalent
+            // of the final PHP payout, so it can be lower than user input when
+            // applied rate is below the reference rate.
             amountFinal = amountSource * appliedRate
+            amountAtOriginalRate = referenceRate > 0 ? amountFinal / referenceRate : amountSource
             const amountFinalAtReferenceRatePhp = amountSource * referenceRate
             const profitPhp = amountFinalAtReferenceRatePhp - amountFinal
 
@@ -200,7 +203,7 @@ export const Transaction: CollectionConfig = {
         }
 
         const cryptoToFiatSendingData = {
-          amount: (doc.amountUsdtOriginal as number) ?? (doc.amountPhp as number),
+          amount: doc.amountPhp as number,
           currency: 'USDT' as const,
           transaction: doc.id,
           status: 'pending' as const,
@@ -517,28 +520,27 @@ export const Transaction: CollectionConfig = {
             afterRead: [
               ({ value, siblingData }) => {
                 const txType = siblingData?.type as 'fiat_to_crypto' | 'crypto_to_fiat' | undefined
+                const numeric = Number(value ?? 0)
 
-                // View-only normalization for legacy rows that stored PHP in amountUsdtOriginal.
+                // Prefer stored value. This preserves computed values for crypto_to_fiat
+                // where amountUsdtOriginal may be lower than user input after spread.
+                if (numeric > 0) {
+                  return Math.round(numeric * 1000000) / 1000000
+                }
+
+                // Legacy fallback for old rows missing amountUsdtOriginal.
                 if (txType === 'crypto_to_fiat') {
-                  const amountSentUsdt = Number(siblingData?.amountPhp ?? 0)
-                  if (amountSentUsdt > 0) {
-                    return Math.round(amountSentUsdt * 1000000) / 1000000
-                  }
-
-                  const originalValue = Number(value ?? 0)
+                  const amountFinalPhp = Number(siblingData?.amountUsdt ?? 0)
                   const referenceRate = Number(
                     siblingData?.referenceRateSnapshot ??
                       siblingData?.usdtToPhpReferenceRateSnapshot ??
                       0,
                   )
 
-                  if (originalValue > 0 && referenceRate > 0) {
-                    return Math.round((originalValue / referenceRate) * 1000000) / 1000000
+                  if (amountFinalPhp > 0 && referenceRate > 0) {
+                    return Math.round((amountFinalPhp / referenceRate) * 1000000) / 1000000
                   }
                 }
-
-                const numeric = Number(value ?? 0)
-                if (numeric > 0) return Math.round(numeric * 1000000) / 1000000
 
                 return value
               },
