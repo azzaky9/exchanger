@@ -424,6 +424,7 @@ export interface FiatToCrypto {
   profitAmountDetail?: string | null;
   profitPercentageDetail?: string | null;
   userReceivesDetail?: string | null;
+  invoiceImageProof?: string | null;
   sentToReference?: string | null;
   transaction: number | Transaction;
   status: 'pending' | 'confirmed' | 'processing' | 'completed';
@@ -456,6 +457,7 @@ export interface CryptoToFiat {
   profitAmountDetail?: string | null;
   profitPercentageDetail?: string | null;
   userReceivesDetail?: string | null;
+  invoiceImageProof?: string | null;
   sentToReference?: string | null;
   transaction: number | Transaction;
   status: 'pending' | 'confirmed' | 'processing' | 'completed' | 'failed';
@@ -735,6 +737,7 @@ export interface FiatToCryptoSelect<T extends boolean = true> {
   profitAmountDetail?: T;
   profitPercentageDetail?: T;
   userReceivesDetail?: T;
+  invoiceImageProof?: T;
   sentToReference?: T;
   transaction?: T;
   status?: T;
@@ -760,6 +763,7 @@ export interface CryptoToFiatSelect<T extends boolean = true> {
   profitAmountDetail?: T;
   profitPercentageDetail?: T;
   userReceivesDetail?: T;
+  invoiceImageProof?: T;
   sentToReference?: T;
   transaction?: T;
   status?: T;

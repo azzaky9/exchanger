@@ -29,6 +29,12 @@ export const Sending: CollectionConfig = {
   endpoints: [markSendingReceivedEndpoint],
   admin: {
     useAsTitle: 'id',
+    components: {
+      beforeListTable: [
+        '/components/ExchangeOperationsSummaryBanner#ExchangeOperationsSummaryBanner',
+        '/components/ListRowClickToDetail#ListRowClickToDetail',
+      ],
+    },
     defaultColumns: [
       'createdAt',
       'id',
@@ -36,6 +42,7 @@ export const Sending: CollectionConfig = {
       'amountSentToExchangeOriginalRateDetail',
       'amountReceivedFromExchangeDetail',
       'userReceivesDetail',
+      'invoiceImageProof',
       'profitAmountDetail',
       'profitPercentageDetail',
       'rateDetail',
@@ -405,6 +412,22 @@ export const Sending: CollectionConfig = {
                     overrideAccess: false,
                   })
 
+            const referenceRate = (transaction as { referenceRateSnapshot?: number | null })
+              ?.referenceRateSnapshot
+            const appliedRate = (transaction as { appliedRateSnapshot?: number | null })
+              ?.appliedRateSnapshot
+
+            if (
+              typeof referenceRate === 'number' &&
+              !Number.isNaN(referenceRate) &&
+              referenceRate > 0 &&
+              typeof appliedRate === 'number' &&
+              !Number.isNaN(appliedRate)
+            ) {
+              const pctFromRate = (Math.abs(referenceRate - appliedRate) / referenceRate) * 100
+              return `${pctFromRate.toFixed(2)}%`
+            }
+
             const profit = (transaction as { profit?: number | null })?.profit
             const baselineUsdt = (transaction as { amountUsdtOriginal?: number | null })
               ?.amountUsdtOriginal
@@ -461,6 +484,81 @@ export const Sending: CollectionConfig = {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`
+          },
+        ],
+      },
+    },
+    {
+      name: 'invoiceImageProof',
+      type: 'text',
+      virtual: true,
+      label: 'Invoice Image',
+      admin: {
+        readOnly: true,
+        components: {
+          Cell: '/components/InvoiceImagePreviewCell#InvoiceImagePreviewCell',
+        },
+      },
+      hooks: {
+        afterRead: [
+          async ({ req, siblingData }) => {
+            const transactionRef = siblingData?.transaction
+            const transactionId =
+              typeof transactionRef === 'object' ? transactionRef?.id : transactionRef
+
+            if (!transactionId) return null
+
+            const transaction =
+              typeof transactionRef === 'object'
+                ? transactionRef
+                : await req.payload.findByID({
+                    collection: 'transactions',
+                    id: transactionId,
+                    depth: 0,
+                    req,
+                    overrideAccess: false,
+                  })
+
+            const invoiceImageRef = (
+              transaction as {
+                invoiceImage?:
+                  | number
+                  | string
+                  | { id?: number | string; url?: string | null; filename?: string | null }
+                  | null
+              }
+            )?.invoiceImage
+
+            if (!invoiceImageRef) return null
+
+            if (typeof invoiceImageRef === 'object') {
+              const directUrl = invoiceImageRef.url?.trim()
+              if (directUrl) return directUrl
+            }
+
+            const mediaId =
+              typeof invoiceImageRef === 'object' ? invoiceImageRef.id : invoiceImageRef
+            if (!mediaId) return null
+
+            const media = await req.payload.findByID({
+              collection: 'media',
+              id: mediaId,
+              depth: 0,
+              req,
+              overrideAccess: false,
+            })
+
+            const mediaUrl = (media as { url?: string | null })?.url
+            if (typeof mediaUrl === 'string' && mediaUrl.trim()) {
+              return mediaUrl
+            }
+
+            const filename = (media as { filename?: string | null })?.filename
+            if (typeof filename === 'string' && filename.trim()) {
+              return `/media/${filename}`
+            }
+
+            return null
           },
         ],
       },
@@ -534,6 +632,9 @@ export const Sending: CollectionConfig = {
           ],
           admin: {
             width: '50%',
+            components: {
+              Cell: '/components/StatusBadgeCell#StatusBadgeCell',
+            },
           },
         },
       ],
