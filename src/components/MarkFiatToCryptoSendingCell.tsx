@@ -24,7 +24,6 @@ type MarkSendingResponse = {
 
 export function MarkFiatToCryptoSendingCell({ rowData }: DefaultCellComponentProps) {
   const { user } = useAuth()
-  if (!(user as { roles?: string[] } | null)?.roles?.includes('user')) return null
 
   const row = rowData as FiatToCryptoRow
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -130,6 +129,8 @@ export function MarkFiatToCryptoSendingCell({ rowData }: DefaultCellComponentPro
   }
 
   const isBrowser = typeof window !== 'undefined'
+
+  if (!(user as { roles?: string[] } | null)?.roles?.includes('user')) return null
 
   return (
     <>

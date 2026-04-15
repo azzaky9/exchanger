@@ -67,7 +67,6 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
 
 export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentProps) {
   const { user } = useAuth()
-  if (!(user as { roles?: string[] } | null)?.roles?.includes('admin')) return null
 
   const row = rowData as OperationRow
   const transactionRef = row.transaction
@@ -316,6 +315,8 @@ export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentP
   if (!canConfirmArrival && !canConfirmDone && !isCompleted) {
     return <span style={{ color: 'var(--theme-text-muted, #888)', fontSize: '0.75rem' }}>-</span>
   }
+
+  if (!(user as { roles?: string[] } | null)?.roles?.includes('admin')) return null
 
   return (
     <div ref={wrapperRef} onClick={(event) => event.stopPropagation()}>

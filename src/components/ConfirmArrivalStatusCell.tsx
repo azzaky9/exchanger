@@ -71,16 +71,12 @@ export function ConfirmArrivalStatusCell({ rowData }: DefaultCellComponentProps)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const isBrowser = typeof window !== 'undefined'
 
-  if (!transactionId) return null
+  // Only render if transactionId exists
 
   const canConfirmArrival =
     status === 'fiat_received' || status === 'crypto_received' || status === 'confirmed'
   const canConfirmDone = status === 'processing' || status === 'confirmed'
   const isCompleted = status === 'completed'
-
-  if (!canConfirmArrival && !canConfirmDone && !isCompleted) {
-    return <span style={{ color: 'var(--theme-text-muted, #888)', fontSize: '0.75rem' }}>-</span>
-  }
 
   const uploadInvoiceImage = async (file: File) => {
     const formData = new FormData()
@@ -234,6 +230,12 @@ export function ConfirmArrivalStatusCell({ rowData }: DefaultCellComponentProps)
       setError(err instanceof Error ? err.message : 'Failed to update status')
       setLoading(false)
     }
+  }
+
+  if (!transactionId) return null
+
+  if (!canConfirmArrival && !canConfirmDone && !isCompleted) {
+    return <span style={{ color: 'var(--theme-text-muted, #888)', fontSize: '0.75rem' }}>-</span>
   }
 
   return (
