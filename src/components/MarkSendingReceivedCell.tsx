@@ -63,6 +63,9 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
       }
       setDone(true)
       setShowModal(false)
+      if (isBrowser) {
+        window.location.reload()
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update')
       setLoading(false)

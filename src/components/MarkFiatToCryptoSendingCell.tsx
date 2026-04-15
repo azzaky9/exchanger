@@ -103,7 +103,9 @@ export function MarkFiatToCryptoSendingCell({ rowData }: DefaultCellComponentPro
 
       setDone(true)
       setShowModal(false)
-      setTimeout(() => window.location.reload(), 500)
+      if (isBrowser) {
+        window.location.reload()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mark as sending')
       setLoading(false)

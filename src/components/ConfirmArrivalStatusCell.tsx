@@ -73,10 +73,15 @@ export function ConfirmArrivalStatusCell({ rowData }: DefaultCellComponentProps)
 
   // Only render if transactionId exists
 
-  const canConfirmArrival =
-    status === 'fiat_received' || status === 'crypto_received' || status === 'confirmed'
+  const canConfirmArrival = status === 'fiat_received' || status === 'crypto_received'
   const canConfirmDone = status === 'processing' || status === 'confirmed'
   const isCompleted = status === 'completed'
+
+  const refreshAfterSuccess = () => {
+    if (isBrowser) {
+      window.location.reload()
+    }
+  }
 
   const uploadInvoiceImage = async (file: File) => {
     const formData = new FormData()
@@ -129,6 +134,7 @@ export function ConfirmArrivalStatusCell({ rowData }: DefaultCellComponentProps)
     }
 
     setOpen(false)
+    refreshAfterSuccess()
   }
 
   useEffect(() => {

@@ -170,13 +170,15 @@ export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentP
   const status = tx?.status
   const txType = tx?.type
 
-  const canConfirmArrival =
-    status === 'fiat_received' ||
-    status === 'crypto_received' ||
-    status === 'confirmed' ||
-    status === 'processing'
+  const canConfirmArrival = status === 'fiat_received' || status === 'crypto_received'
   const canConfirmDone = status === 'processing' || status === 'confirmed'
   const isCompleted = status === 'completed'
+
+  const refreshAfterSuccess = () => {
+    if (isBrowser) {
+      window.location.reload()
+    }
+  }
 
   const uploadInvoiceImage = async (file: File) => {
     const formData = new FormData()
@@ -237,6 +239,7 @@ export function ExchangeAdminStatusActionCell({ rowData }: DefaultCellComponentP
     )
 
     setOpen(false)
+      refreshAfterSuccess()
   }
 
   const runAction = async (
