@@ -156,7 +156,12 @@ export function ExchangeOperationsSummaryBanner() {
             }
           }
 
-          if (isAdmin && doc.transaction && typeof doc.transaction === 'object') {
+          if (
+            isAdmin &&
+            doc.status === 'completed' &&
+            doc.transaction &&
+            typeof doc.transaction === 'object'
+          ) {
             const profit = Number(doc.transaction.profit ?? 0)
             if (!Number.isNaN(profit)) {
               totalRevenue += profit

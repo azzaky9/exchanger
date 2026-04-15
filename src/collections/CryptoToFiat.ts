@@ -366,6 +366,9 @@ export const Sending: CollectionConfig = {
                     overrideAccess: false,
                   })
 
+            const txStatus = (transaction as { status?: string | null })?.status
+            if (txStatus !== 'completed') return '—'
+
             const profitUsdt = (transaction as { profit?: number | null })?.profit
 
             if (typeof profitUsdt !== 'number' || Number.isNaN(profitUsdt)) {
@@ -411,6 +414,9 @@ export const Sending: CollectionConfig = {
                     req,
                     overrideAccess: false,
                   })
+
+            const txStatus = (transaction as { status?: string | null })?.status
+            if (txStatus !== 'completed') return '—'
 
             const referenceRate = (transaction as { referenceRateSnapshot?: number | null })
               ?.referenceRateSnapshot

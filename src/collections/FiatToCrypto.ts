@@ -373,6 +373,9 @@ export const Received: CollectionConfig = {
                     overrideAccess: false,
                   })
 
+            const txStatus = (transaction as { status?: string | null })?.status
+            if (txStatus !== 'completed') return '—'
+
             const profitUsdt = (transaction as { profit?: number | null })?.profit
 
             if (typeof profitUsdt !== 'number' || Number.isNaN(profitUsdt)) {
@@ -418,6 +421,9 @@ export const Received: CollectionConfig = {
                     req,
                     overrideAccess: false,
                   })
+
+            const txStatus = (transaction as { status?: string | null })?.status
+            if (txStatus !== 'completed') return '—'
 
             const profit = (transaction as { profit?: number | null })?.profit
             const baselineUsdt = (transaction as { amountUsdtOriginal?: number | null })

@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import React, { useCallback, useEffect, useState } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -439,13 +439,13 @@ export function FinanceDashboardView() {
         },
         {
           label: 'Completed',
-          value: kpis.completed.toLocaleString(),
+          value: kpis.completed.toLocaleString('en-US'),
           sub: `of ${kpis.totalTx} total`,
           accent: '#ca8a04',
         },
         {
           label: 'In Progress',
-          value: kpis.pending.toLocaleString(),
+          value: kpis.pending.toLocaleString('en-US'),
           sub: `Sent Pending: ₱${fmt(kpis.pendingSentPhp, 2)} | ${fmt(kpis.pendingSentUsdt)} USDT`,
           accent: '#f97316',
         },
@@ -635,8 +635,7 @@ export function FinanceDashboardView() {
                       <td style={{ ...s.td, textAlign: 'right' as const }}>
                         {tx.type === 'fiat_to_crypto'
                           ? `₱${fmt(tx.amountPhp, 2)}`
-                          : `${fmt(tx.amountPhp, 6)} USDT`
-                        }
+                          : `${fmt(tx.amountPhp, 6)} USDT`}
                       </td>
                       <td style={{ ...s.td, textAlign: 'right' as const }}>
                         {tx.type === 'fiat_to_crypto'

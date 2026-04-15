@@ -1,6 +1,6 @@
+import type { User } from '@/payload-types'
 import type { Endpoint } from 'payload'
 import { APIError } from 'payload'
-import type { User } from '@/payload-types'
 
 type TransactionRow = {
   type: string
@@ -107,14 +107,15 @@ export const financeSummaryEndpoint: Endpoint = {
     for (const tx of docs) {
       const p = tx.profit ?? 0
       const isFiatToCrypto = tx.type === 'fiat_to_crypto'
+      const isCompleted = tx.status === 'completed'
 
       if (isFiatToCrypto) {
-        profitUsdt += p
+        if (isCompleted) profitUsdt += p
         volumePhp += tx.amountPhp ?? 0 // Source is PHP
         volumeUsdt += tx.amountUsdt ?? 0 // Target is USDT
       } else {
         // crypto_to_fiat
-        profitPhp += p
+        if (isCompleted) profitPhp += p
         volumeUsdt += tx.amountPhp ?? 0 // Source is USDT
         volumePhp += tx.amountUsdt ?? 0 // Target is PHP
       }
@@ -131,8 +132,8 @@ export const financeSummaryEndpoint: Endpoint = {
 
       const day = tx.createdAt.slice(0, 10)
       if (!dailyMap[day]) dailyMap[day] = { usdt: 0, php: 0 }
-      if (tx.type === 'fiat_to_crypto') dailyMap[day].usdt += p
-      if (tx.type === 'crypto_to_fiat') dailyMap[day].php += p
+      if (isCompleted && tx.type === 'fiat_to_crypto') dailyMap[day].usdt += p
+      if (isCompleted && tx.type === 'crypto_to_fiat') dailyMap[day].php += p
     }
 
     const chartData = Object.entries(dailyMap)

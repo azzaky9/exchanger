@@ -4,6 +4,7 @@ import type { DefaultCellComponentProps } from 'payload'
 
 type RowData = {
   type?: 'fiat_to_crypto' | 'crypto_to_fiat'
+  status?: string | null
   profit?: number | null
   amountUsdtOriginal?: number | null
   amountPhp?: number | null
@@ -23,6 +24,10 @@ export function ProfitPercentageCell({ rowData }: DefaultCellComponentProps) {
   if (!(user as any)?.roles?.includes('admin')) return null
 
   const row = rowData as RowData
+  if (row.status !== 'completed') {
+    return <span style={{ color: 'var(--theme-text-muted, #888)' }}>—</span>
+  }
+
   const profit = typeof row.profit !== 'undefined' ? row.profit : 0
   const base = row.type === 'crypto_to_fiat' ? row.amountPhp : row.amountUsdtOriginal
 

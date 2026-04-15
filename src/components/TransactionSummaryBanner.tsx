@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@payloadcms/ui'
 import { useSearchParams } from 'next/navigation'
+import React, { useCallback, useEffect, useState } from 'react'
 
 type Preset = 'today' | 'week' | 'month' | 'year' | 'all'
 type TxType = 'all' | 'fiat_to_crypto' | 'crypto_to_fiat'
@@ -108,7 +108,12 @@ function PresetBar({ active, onChange }: { active: Preset; onChange: (p: Preset)
   )
 }
 
-function AmountCell({ label, amount, isCrypto, accent }: {
+function AmountCell({
+  label,
+  amount,
+  isCrypto,
+  accent,
+}: {
   label: string
   amount: number
   isCrypto: boolean
@@ -126,27 +131,84 @@ function AmountCell({ label, amount, isCrypto, accent }: {
         padding: '14px 18px',
       }}
     >
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'var(--theme-elevation-500)', marginBottom: 4 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.07em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--theme-elevation-500)',
+          marginBottom: 4,
+        }}
+      >
         {label}
       </div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--theme-text)', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div
+        style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: 'var(--theme-text)',
+          lineHeight: 1.1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}
+      >
         {isCrypto ? <UsdtLogo size={20} /> : <span>₱</span>}
         <span>
           {isCrypto
             ? amount.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
-            : amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            : amount.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
         </span>
       </div>
     </div>
   )
 }
 
-function CountCard({ label, value, accent, sub }: { label: string; value: number; accent: string; sub?: string }) {
+function CountCard({
+  label,
+  value,
+  accent,
+  sub,
+}: {
+  label: string
+  value: number
+  accent: string
+  sub?: string
+}) {
   return (
-    <div style={{ flex: 1, minWidth: 120, background: 'var(--theme-elevation-50)', border: '1px solid var(--theme-elevation-150)', borderTop: `3px solid ${accent}`, borderRadius: 8, padding: '14px 18px' }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'var(--theme-elevation-500)', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--theme-text)', lineHeight: 1.1 }}>{value.toLocaleString()}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--theme-elevation-450)', marginTop: 3 }}>{sub}</div>}
+    <div
+      style={{
+        flex: 1,
+        minWidth: 120,
+        background: 'var(--theme-elevation-50)',
+        border: '1px solid var(--theme-elevation-150)',
+        borderTop: `3px solid ${accent}`,
+        borderRadius: 8,
+        padding: '14px 18px',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.07em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--theme-elevation-500)',
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--theme-text)', lineHeight: 1.1 }}>
+        {value.toLocaleString('en-US')}
+      </div>
+      {sub && (
+        <div style={{ fontSize: 11, color: 'var(--theme-elevation-450)', marginTop: 3 }}>{sub}</div>
+      )}
     </div>
   )
 }
@@ -185,37 +247,47 @@ export function TransactionSummaryBanner() {
         type?: string
       }[]
 
-  // Accumulate per type — from EXCHANGER perspective
-    let receivedPhp = 0,    // fiat_to_crypto: exchanger receives PHP  (amountPhp)
-      sentUsdt = 0,         // fiat_to_crypto: exchanger sends USDT    (amountUsdt)
-      receivedUsdt = 0,     // crypto_to_fiat: exchanger receives USDT (amountPhp field stores small USDT)
-      sentPhp = 0,          // crypto_to_fiat: exchanger sends PHP      (amountUsdt field stores large PHP)
-      totalPending = 0,
-      totalCompleted = 0,
-      pendingSentUsdt = 0,
-      pendingSentPhp = 0
+      // Accumulate per type — from EXCHANGER perspective
+      let receivedPhp = 0, // fiat_to_crypto: exchanger receives PHP  (amountPhp)
+        sentUsdt = 0, // fiat_to_crypto: exchanger sends USDT    (amountUsdt)
+        receivedUsdt = 0, // crypto_to_fiat: exchanger receives USDT (amountPhp field stores small USDT)
+        sentPhp = 0, // crypto_to_fiat: exchanger sends PHP      (amountUsdt field stores large PHP)
+        totalPending = 0,
+        totalCompleted = 0,
+        pendingSentUsdt = 0,
+        pendingSentPhp = 0
 
-    for (const tx of docs) {
-      if (tx.type === 'fiat_to_crypto') {
-        receivedPhp += tx.amountPhp ?? 0   // PHP customer paid in
-        sentUsdt    += tx.amountUsdt ?? 0  // USDT exchanger sent out
-      } else {
-        receivedUsdt += tx.amountPhp ?? 0  // USDT received
-        sentPhp      += tx.amountUsdt ?? 0 // PHP paid out
-      }
-      
-      if (['pending', 'confirmed', 'processing'].includes(tx.status)) {
-        totalPending++
+      for (const tx of docs) {
         if (tx.type === 'fiat_to_crypto') {
-          pendingSentUsdt += tx.amountUsdt ?? 0
+          receivedPhp += tx.amountPhp ?? 0 // PHP customer paid in
+          sentUsdt += tx.amountUsdt ?? 0 // USDT exchanger sent out
         } else {
-          pendingSentPhp += tx.amountUsdt ?? 0
+          receivedUsdt += tx.amountPhp ?? 0 // USDT received
+          sentPhp += tx.amountUsdt ?? 0 // PHP paid out
         }
-      }
-      if (tx.status === 'completed') totalCompleted++
-    }
 
-    setSummary({ receivedPhp, sentUsdt, receivedUsdt, sentPhp, totalPending, totalCompleted, count: docs.length, pendingSentUsdt, pendingSentPhp })
+        if (['pending', 'confirmed', 'processing'].includes(tx.status)) {
+          totalPending++
+          if (tx.type === 'fiat_to_crypto') {
+            pendingSentUsdt += tx.amountUsdt ?? 0
+          } else {
+            pendingSentPhp += tx.amountUsdt ?? 0
+          }
+        }
+        if (tx.status === 'completed') totalCompleted++
+      }
+
+      setSummary({
+        receivedPhp,
+        sentUsdt,
+        receivedUsdt,
+        sentPhp,
+        totalPending,
+        totalCompleted,
+        count: docs.length,
+        pendingSentUsdt,
+        pendingSentPhp,
+      })
     } catch {
       // silent
     } finally {
@@ -237,7 +309,15 @@ export function TransactionSummaryBanner() {
   return (
     <div style={{ paddingTop: 16, paddingBottom: 8 }}>
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          flexWrap: 'wrap',
+          marginBottom: 12,
+        }}
+      >
         <span style={{ fontSize: 12, color: 'var(--theme-elevation-500)', fontWeight: 600 }}>
           My Summary
         </span>
@@ -256,27 +336,47 @@ export function TransactionSummaryBanner() {
       >
         {/* Fiat→Crypto: exchanger receives PHP, sends USDT */}
         {(showAll || showFiat) && (
-          <AmountCell label="PHP Received" amount={summary.receivedPhp} isCrypto={false} accent="#16a34a" />
+          <AmountCell
+            label="PHP Received"
+            amount={summary.receivedPhp}
+            isCrypto={false}
+            accent="#16a34a"
+          />
         )}
         {(showAll || showFiat) && (
-          <AmountCell label="USDT Sent" amount={summary.sentUsdt} isCrypto={true} accent="#7c3aed" />
+          <AmountCell
+            label="USDT Sent"
+            amount={summary.sentUsdt}
+            isCrypto={true}
+            accent="#7c3aed"
+          />
         )}
 
         {/* Crypto→Fiat: exchanger receives USDT, sends PHP */}
         {(showAll || showCrypto) && (
-          <AmountCell label="USDT Received" amount={summary.receivedUsdt} isCrypto={true} accent="#16a34a" />
+          <AmountCell
+            label="USDT Received"
+            amount={summary.receivedUsdt}
+            isCrypto={true}
+            accent="#16a34a"
+          />
         )}
         {(showAll || showCrypto) && (
           <AmountCell label="PHP Sent" amount={summary.sentPhp} isCrypto={false} accent="#7c3aed" />
         )}
 
-        <CountCard 
-          label="Pending" 
-          value={summary.totalPending} 
-          accent="#f97316" 
-          sub={`Sent Pending: ₱${summary.pendingSentPhp.toLocaleString()} | ${summary.pendingSentUsdt.toLocaleString()} USDT`} 
+        <CountCard
+          label="Pending"
+          value={summary.totalPending}
+          accent="#f97316"
+          sub={`Sent Pending: ₱${summary.pendingSentPhp.toLocaleString('en-US')} | ${summary.pendingSentUsdt.toLocaleString('en-US')} USDT`}
         />
-        <CountCard label="Completed" value={summary.totalCompleted} accent="#2563eb" sub={`of ${summary.count} total`} />
+        <CountCard
+          label="Completed"
+          value={summary.totalCompleted}
+          accent="#2563eb"
+          sub={`of ${summary.count} total`}
+        />
       </div>
     </div>
   )
