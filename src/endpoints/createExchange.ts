@@ -191,14 +191,12 @@ export const createExchangeEndpoint: Endpoint = {
         id: transaction.id,
         orderId: transaction.orderId,
         type: transaction.type,
-        amountPhp: transaction.amountPhp,
-        amountUsdt: transaction.amountUsdt,
+        amountPhp: type === "crypto_to_fiat" ? transaction.amountPhp : amountPhp,
+        amountUsdt: type === "fiat_to_crypto" ? transaction.amountUsdt : amount,
         networ:
           typeof transaction.network === 'object'
             ? transaction.network.symbol
             : transaction.network,
-        // amountUsdt: transaction.amountUsdt,
-        // network: transaction.network,
         targetAddress: transaction.targetAddress,
         status: transaction.status,
         createdAt: transaction.createdAt,
