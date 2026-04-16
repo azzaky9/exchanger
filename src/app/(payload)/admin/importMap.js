@@ -20,12 +20,12 @@ import { LinkedRateField as LinkedRateField_5e644179658fd8d01801e2c73468bfb1 } f
 import { LinkedRateFieldPhp as LinkedRateFieldPhp_5e644179658fd8d01801e2c73468bfb1 } from '../../../components/LinkedRateField'
 import { ExchangeActionFiatToCryptoCell as ExchangeActionFiatToCryptoCell_27ebc8b602f9625727fdee97b62165ab } from '../../../components/ExchangeActionFiatToCryptoCell'
 import { InvoiceImagePreviewCell as InvoiceImagePreviewCell_ea2c1c2a160e7bb86b0e71e224ea855a } from '../../../components/InvoiceImagePreviewCell'
+import { BankDetailsPopupCell as BankDetailsPopupCell_887ca04875dc545df665cd7fd4153b8b } from '../../../components/BankDetailsPopupCell'
 import { StatusBadgeCell as StatusBadgeCell_d20e6a2dcae53ab3648d7cf1cca0f4ac } from '../../../components/StatusBadgeCell'
 import { ExchangeOperationsSummaryBanner as ExchangeOperationsSummaryBanner_8863dc716abba2c6f6778463e087a220 } from '../../../components/ExchangeOperationsSummaryBanner'
 import { ListRowClickToDetail as ListRowClickToDetail_e0d42935fced816b12619d42aa67d972 } from '../../../components/ListRowClickToDetail'
 import { RowHoverHighlight as RowHoverHighlight_875f974f263dc75d399d16d79bcf2de1 } from '../../../components/RowHoverHighlight'
 import { ExchangeActionCryptoToFiatCell as ExchangeActionCryptoToFiatCell_f538604618497cfa041e1c8920e44b2f } from '../../../components/ExchangeActionCryptoToFiatCell'
-import { BankDetailsPopupCell as BankDetailsPopupCell_887ca04875dc545df665cd7fd4153b8b } from '../../../components/BankDetailsPopupCell'
 import { AdminIcon as AdminIcon_e0ddcb63f1b1b3625cdefa5bde350f02 } from '../../../components/AdminBranding'
 import { AdminLogo as AdminLogo_e0ddcb63f1b1b3625cdefa5bde350f02 } from '../../../components/AdminBranding'
 import { FinanceNavLink as FinanceNavLink_ab4cb524b4ab511967de75b2441582bf } from '../../../components/FinanceNavLink'
@@ -56,12 +56,12 @@ export const importMap = {
   "/components/LinkedRateField#LinkedRateFieldPhp": LinkedRateFieldPhp_5e644179658fd8d01801e2c73468bfb1,
   "/components/ExchangeActionFiatToCryptoCell#ExchangeActionFiatToCryptoCell": ExchangeActionFiatToCryptoCell_27ebc8b602f9625727fdee97b62165ab,
   "/components/InvoiceImagePreviewCell#InvoiceImagePreviewCell": InvoiceImagePreviewCell_ea2c1c2a160e7bb86b0e71e224ea855a,
+  "/components/BankDetailsPopupCell#BankDetailsPopupCell": BankDetailsPopupCell_887ca04875dc545df665cd7fd4153b8b,
   "/components/StatusBadgeCell#StatusBadgeCell": StatusBadgeCell_d20e6a2dcae53ab3648d7cf1cca0f4ac,
   "/components/ExchangeOperationsSummaryBanner#ExchangeOperationsSummaryBanner": ExchangeOperationsSummaryBanner_8863dc716abba2c6f6778463e087a220,
   "/components/ListRowClickToDetail#ListRowClickToDetail": ListRowClickToDetail_e0d42935fced816b12619d42aa67d972,
   "/components/RowHoverHighlight#RowHoverHighlight": RowHoverHighlight_875f974f263dc75d399d16d79bcf2de1,
   "/components/ExchangeActionCryptoToFiatCell#ExchangeActionCryptoToFiatCell": ExchangeActionCryptoToFiatCell_f538604618497cfa041e1c8920e44b2f,
-  "/components/BankDetailsPopupCell#BankDetailsPopupCell": BankDetailsPopupCell_887ca04875dc545df665cd7fd4153b8b,
   "/components/AdminBranding#AdminIcon": AdminIcon_e0ddcb63f1b1b3625cdefa5bde350f02,
   "/components/AdminBranding#AdminLogo": AdminLogo_e0ddcb63f1b1b3625cdefa5bde350f02,
   "/components/FinanceNavLink#FinanceNavLink": FinanceNavLink_ab4cb524b4ab511967de75b2441582bf,

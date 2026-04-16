@@ -2,6 +2,22 @@ import { FIAT_TO_CRYPTO_COLLECTION_SLUG } from '@/lib/collectionSlugs'
 import type { CollectionConfig } from 'payload'
 import { markFiatToCryptoSendingEndpoint } from '../endpoints/markFiatToCryptoSending'
 
+const formatBankDetails = (raw?: string | null) => {
+  const value = raw?.trim()
+  if (!value) return null
+
+  if (value.includes('\n')) return value
+
+  const parts = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length === 0) return value
+
+  return parts.join('\n')
+}
+
 export const Received: CollectionConfig = {
   slug: FIAT_TO_CRYPTO_COLLECTION_SLUG,
   labels: {
@@ -29,7 +45,7 @@ export const Received: CollectionConfig = {
       'profitAmountDetail',
       'profitPercentageDetail',
       'rateDetail',
-      'sentToReference',
+      'destination',
       'status',
       'transaction',
       'exchangeAction',
@@ -631,17 +647,64 @@ export const Received: CollectionConfig = {
       },
     },
     {
+      name: 'destination',
+      type: 'text',
+      virtual: true,
+      label: 'Destination',
+      admin: {
+        readOnly: true,
+      },
+      hooks: {
+        afterRead: [
+          async ({ req, siblingData }) => {
+            const transactionRef = siblingData?.transaction
+            const transactionId =
+              typeof transactionRef === 'object' ? transactionRef?.id : transactionRef
+
+            if (!transactionId) return 'Wallet address unavailable'
+
+            const transaction =
+              typeof transactionRef === 'object'
+                ? transactionRef
+                : await req.payload.findByID({
+                    collection: 'transactions',
+                    id: transactionId,
+                    depth: 0,
+                    req,
+                    overrideAccess: false,
+                  })
+
+            const targetAddress = (transaction as { targetAddress?: string | null })?.targetAddress
+
+            return targetAddress?.trim() || 'Wallet address unavailable'
+          },
+        ],
+      },
+    },
+    {
       name: 'sentToReference',
       type: 'text',
       virtual: true,
       label: 'Sent To Reference',
       admin: {
         readOnly: true,
-        condition: () => false,
+        components: {
+          Cell: '/components/BankDetailsPopupCell#BankDetailsPopupCell',
+        },
       },
       hooks: {
         afterRead: [
           async ({ req, siblingData }) => {
+            const exchangeBankName = process.env.BANK_NAME_EXCHANGER?.trim()
+            const exchangeAccountName = process.env.BANK_ACCOUNT_NAME_EXCHANGER?.trim()
+            const exchangeAccountNumber = process.env.BANK_ACCOUNT_NUMBER_EXCHANGER?.trim()
+
+            if (exchangeBankName || exchangeAccountName || exchangeAccountNumber) {
+              return formatBankDetails(
+                `Bank Name: ${exchangeBankName ?? '-'}, Account Name: ${exchangeAccountName ?? '-'}, Account Number: ${exchangeAccountNumber ?? '-'}`,
+              )
+            }
+
             const transactionRef = siblingData?.transaction
             const transactionId =
               typeof transactionRef === 'object' ? transactionRef?.id : transactionRef

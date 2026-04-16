@@ -48,7 +48,7 @@ export const Sending: CollectionConfig = {
       'profitAmountDetail',
       'profitPercentageDetail',
       'rateDetail',
-      'sentToReference',
+      'destination',
       'status',
       'transaction',
       'exchangeAction',
@@ -644,6 +644,53 @@ export const Sending: CollectionConfig = {
       },
     },
     {
+      name: 'destination',
+      type: 'text',
+      virtual: true,
+      label: 'Destination',
+      admin: {
+        readOnly: true,
+        components: {
+          Cell: '/components/BankDetailsPopupCell#BankDetailsPopupCell',
+        },
+      },
+      hooks: {
+        afterRead: [
+          async ({ req, siblingData }) => {
+            const lottoBankName = process.env.BANK_NAME_LOTTO?.trim()
+            const lottoAccountName = process.env.BANK_ACCOUNT_NAME_LOTTO?.trim()
+            const lottoAccountNumber = process.env.BANK_ACCOUNT_NUMBER_LOTTO?.trim()
+
+            if (lottoBankName || lottoAccountName || lottoAccountNumber) {
+              return formatBankDetails(
+                `Bank Name: ${lottoBankName ?? '-'}, Account Name: ${lottoAccountName ?? '-'}, Account Number: ${lottoAccountNumber ?? '-'}`,
+              )
+            }
+
+            const transactionRef = siblingData?.transaction
+            const transactionId =
+              typeof transactionRef === 'object' ? transactionRef?.id : transactionRef
+
+            if (!transactionId) return 'Lotto bank details unavailable'
+
+            const transaction =
+              typeof transactionRef === 'object'
+                ? transactionRef
+                : await req.payload.findByID({
+                    collection: 'transactions',
+                    id: transactionId,
+                    depth: 0,
+                    req,
+                    overrideAccess: false,
+                  })
+
+            const bankDetails = (transaction as { bankDetails?: string | null })?.bankDetails
+            return formatBankDetails(bankDetails) || 'Lotto bank details unavailable'
+          },
+        ],
+      },
+    },
+    {
       name: 'sentToReference',
       type: 'text',
       virtual: true,
@@ -658,6 +705,16 @@ export const Sending: CollectionConfig = {
       hooks: {
         afterRead: [
           async ({ req, siblingData }) => {
+            const exchangeBankName = process.env.BANK_NAME_EXCHANGER?.trim()
+            const exchangeAccountName = process.env.BANK_ACCOUNT_NAME_EXCHANGER?.trim()
+            const exchangeAccountNumber = process.env.BANK_ACCOUNT_NUMBER_EXCHANGER?.trim()
+
+            if (exchangeBankName || exchangeAccountName || exchangeAccountNumber) {
+              return formatBankDetails(
+                `Bank Name: ${exchangeBankName ?? '-'}, Account Name: ${exchangeAccountName ?? '-'}, Account Number: ${exchangeAccountNumber ?? '-'}`,
+              )
+            }
+
             const transactionRef = siblingData?.transaction
             const transactionId =
               typeof transactionRef === 'object' ? transactionRef?.id : transactionRef
