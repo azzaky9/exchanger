@@ -60,12 +60,19 @@ export const uploadInvoiceByOrderIdEndpoint: Endpoint = {
       throw new APIError('Invoice upload via orderId is only supported for crypto_to_fiat', 400)
     }
 
+    const fileBuffer = Buffer.from(await fileFromBody.arrayBuffer())
+
     const mediaDoc = await payload.create({
       collection: 'media',
       data: {
         alt,
       },
-      file: fileFromBody,
+      file: {
+        data: fileBuffer,
+        mimetype: fileFromBody.type || 'application/octet-stream',
+        name: fileFromBody.name || `invoice-${orderId}`,
+        size: fileFromBody.size,
+      },
       req,
       overrideAccess: true,
     })
