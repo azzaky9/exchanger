@@ -141,7 +141,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
-  roles: ('admin' | 'user')[];
+  roles: ('admin' | 'user' | 'arca')[];
   updatedAt: string;
   createdAt: string;
   enableAPIKey?: boolean | null;

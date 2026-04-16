@@ -10,6 +10,7 @@ import { createExchangeEndpoint } from '../endpoints/createExchange'
 import { createExchangeBatchEndpoint } from '../endpoints/createExchangeBatch'
 import { financeSummaryEndpoint } from '../endpoints/finance-summary'
 import { settlementStatusEndpoint } from '../endpoints/settlementStatus'
+import { uploadInvoiceByOrderIdEndpoint } from '../endpoints/uploadInvoiceByOrderId'
 
 export const Transaction: CollectionConfig = {
   slug: 'transactions',
@@ -20,6 +21,7 @@ export const Transaction: CollectionConfig = {
     settlementStatusEndpoint,
     financeSummaryEndpoint,
     confirmTransactionArrivalEndpoint,
+    uploadInvoiceByOrderIdEndpoint,
   ],
   admin: {
     useAsTitle: 'id',

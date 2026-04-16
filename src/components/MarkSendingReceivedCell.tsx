@@ -72,7 +72,8 @@ export function MarkSendingReceivedCell({ rowData }: DefaultCellComponentProps) 
     }
   }
 
-  if (!(user as { roles?: string[] } | null)?.roles?.includes('user')) return null
+  const roles = (user as { roles?: string[] } | null)?.roles ?? []
+  if (!(roles.includes('user') || roles.includes('arca'))) return null
 
   return (
     <>

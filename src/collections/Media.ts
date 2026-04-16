@@ -7,7 +7,10 @@ export const Media: CollectionConfig = {
   },
   access: {
     read: ({ req: { user } }) =>
-      user?.roles?.includes('admin') || user?.roles?.includes('user') || false,
+      user?.roles?.includes('admin') ||
+      user?.roles?.includes('user') ||
+      user?.roles?.includes('arca') ||
+      false,
     create: ({ req: { user } }) =>
       user?.roles?.includes('admin') || user?.roles?.includes('user') || false,
     update: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,

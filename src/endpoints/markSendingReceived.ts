@@ -16,7 +16,8 @@ export const markSendingReceivedEndpoint: Endpoint = {
       throw new APIError('Unauthorized', 401)
     }
 
-    const isAllowed = user.roles?.includes('user') || user.roles?.includes('admin')
+    const isAllowed =
+      user.roles?.includes('user') || user.roles?.includes('admin') || user.roles?.includes('arca')
     if (!isAllowed) {
       throw new APIError('Forbidden', 403)
     }

@@ -13,7 +13,7 @@ export function ExchangeActionCryptoToFiatCell(props: DefaultCellComponentProps)
     return <ExchangeAdminStatusActionCell {...props} />
   }
 
-  if (roles.includes('user')) {
+  if (roles.includes('user') || roles.includes('arca')) {
     return <MarkSendingReceivedCell {...props} />
   }
 

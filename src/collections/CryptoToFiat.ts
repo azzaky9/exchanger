@@ -54,7 +54,12 @@ export const Sending: CollectionConfig = {
       'exchangeAction',
     ],
     group: 'Transactions',
-    hidden: ({ user }) => !(user?.roles?.includes('user') || user?.roles?.includes('admin')),
+    hidden: ({ user }) =>
+      !(
+        user?.roles?.includes('user') ||
+        user?.roles?.includes('admin') ||
+        user?.roles?.includes('arca')
+      ),
   },
   access: {
     create: ({ req: { user } }) => user?.roles?.includes('admin') ?? false,
@@ -72,7 +77,11 @@ export const Sending: CollectionConfig = {
         position: 'sidebar',
         condition: (data, _, { user }) =>
           Boolean(data?.id) &&
-          Boolean(user?.roles?.includes('admin') || user?.roles?.includes('user')),
+          Boolean(
+            user?.roles?.includes('admin') ||
+            user?.roles?.includes('user') ||
+            user?.roles?.includes('arca'),
+          ),
         components: {
           Cell: '/components/ExchangeActionCryptoToFiatCell#ExchangeActionCryptoToFiatCell',
         },
