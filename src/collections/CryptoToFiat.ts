@@ -150,7 +150,7 @@ export const Sending: CollectionConfig = {
       name: 'userSendsDetail',
       type: 'text',
       virtual: true,
-      label: 'User Sends',
+      label: 'Lotto Sends',
       admin: {
         readOnly: true,
         condition: () => false,
@@ -460,7 +460,7 @@ export const Sending: CollectionConfig = {
       name: 'userReceivesDetail',
       type: 'text',
       virtual: true,
-      label: 'User Receives',
+      label: 'Lotto Receive',
       admin: {
         readOnly: true,
         condition: () => false,
