@@ -43,6 +43,7 @@ export const Sending: CollectionConfig = {
       'amountSentToExchangeOriginalRateDetail',
       'amountReceivedFromExchangeDetail',
       'userReceivesDetail',
+      'networkSymbolDetail',
       'invoiceImageProof',
       'profitAmountDetail',
       'profitPercentageDetail',
@@ -566,6 +567,78 @@ export const Sending: CollectionConfig = {
             }
 
             return null
+          },
+        ],
+      },
+    },
+    {
+      name: 'networkSymbolDetail',
+      type: 'text',
+      virtual: true,
+      label: 'Network',
+      admin: {
+        readOnly: true,
+      },
+      hooks: {
+        afterRead: [
+          async ({ req, siblingData }) => {
+            const transactionRef = siblingData?.transaction
+            const transactionId =
+              typeof transactionRef === 'object' ? transactionRef?.id : transactionRef
+
+            if (!transactionId) return 'Network unavailable'
+
+            const transaction =
+              typeof transactionRef === 'object'
+                ? transactionRef
+                : await req.payload.findByID({
+                    collection: 'transactions',
+                    id: transactionId,
+                    depth: 0,
+                    req,
+                    overrideAccess: false,
+                  })
+
+            const networkRef =
+              (
+                transaction as {
+                  network?:
+                    | number
+                    | string
+                    | { id?: number | string; symbol?: string | null; name?: string | null }
+                    | null
+                }
+              )?.network ?? null
+
+            if (!networkRef) return 'Network unavailable'
+
+            if (typeof networkRef === 'object') {
+              const inlineSymbol = networkRef.symbol?.trim()
+              if (inlineSymbol) return inlineSymbol.toUpperCase()
+            }
+
+            const networkId = typeof networkRef === 'object' ? networkRef.id : networkRef
+            if (!networkId) return 'Network unavailable'
+
+            const network = await req.payload.findByID({
+              collection: 'networks',
+              id: networkId,
+              depth: 0,
+              req,
+              overrideAccess: true,
+            })
+
+            const symbol = (network as { symbol?: string | null })?.symbol
+            if (typeof symbol === 'string' && symbol.trim()) {
+              return symbol.trim().toUpperCase()
+            }
+
+            const name = (network as { name?: string | null })?.name
+            if (typeof name === 'string' && name.trim()) {
+              return name.trim()
+            }
+
+            return 'Network unavailable'
           },
         ],
       },
