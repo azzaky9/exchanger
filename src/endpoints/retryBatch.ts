@@ -2,7 +2,7 @@ import type { Endpoint } from 'payload'
 import { APIError } from 'payload'
 import { Queue } from 'bullmq'
 import { decrypt } from '../lib/encryption'
-import type { Network, Transaction, Treasury } from '../payload-types'
+import type { Network, Treasury } from '../payload-types'
 
 /**
  * Get a Redis connection for the transfer queue.

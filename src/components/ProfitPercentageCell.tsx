@@ -1,6 +1,7 @@
 'use client'
 import { useAuth } from '@payloadcms/ui'
 import type { DefaultCellComponentProps } from 'payload'
+import type { User } from '@/payload-types'
 
 type RowData = {
   type?: 'fiat_to_crypto' | 'crypto_to_fiat'
@@ -21,7 +22,7 @@ export function ProfitPercentageCell({ rowData }: DefaultCellComponentProps) {
   const { user } = useAuth()
 
   // Hide entirely for non-admin users
-  if (!(user as any)?.roles?.includes('admin')) return null
+  if (!(user as User | null)?.roles?.includes('admin')) return null
 
   const row = rowData as RowData
   if (row.status !== 'completed') {

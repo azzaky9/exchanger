@@ -383,8 +383,8 @@ export function FinanceDashboardView() {
       const res = await fetch(`/api/transactions/finance-summary?${params}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       setData(await res.json())
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }

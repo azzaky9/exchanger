@@ -1,5 +1,5 @@
 import type { User } from '@/payload-types'
-import type { Endpoint } from 'payload'
+import type { Endpoint, Where } from 'payload'
 import { APIError } from 'payload'
 
 type TransactionRow = {
@@ -67,7 +67,7 @@ export const financeSummaryEndpoint: Endpoint = {
     }
     // preset === 'all' or nothing → no date filter
 
-    const where: Record<string, any> = {}
+    const where: Where = {}
     if (from) {
       where.createdAt = {
         greater_than_equal: from.toISOString(),

@@ -91,7 +91,10 @@ export default buildConfig({
           }
 
           if (!exchangeRateRes.docs[0].isActive) {
-            throw new Error('Exchange rate is already disabled per 15 minutes')
+            payload.logger.info(
+              '[disableExchangeRate] Exchange rate is already disabled per 15 minutes.',
+            )
+            return { output: { success: true } }
           }
 
           const currentRate = exchangeRateRes.docs[0]
@@ -112,7 +115,7 @@ export default buildConfig({
           {
             // Jobs are queued to 'scheduled' every minute by this cron.
             // They only *execute* once autoRun (below) polls the queue.
-            cron: '*/1 * * * *',
+            cron: '*/15 * * * *',
             queue: 'scheduled',
           },
         ],
@@ -122,7 +125,7 @@ export default buildConfig({
     // Without this, jobs accumulate in the database but never run.
     autoRun: [
       {
-        cron: '*/1 * * * *',
+        cron: '*/15 * * * *',
         queue: 'scheduled',
       },
     ],

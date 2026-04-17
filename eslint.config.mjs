@@ -31,7 +31,10 @@ const eslintConfig = [
     },
   },
   {
-    ignores: ['.next/'],
+    // Payload auto-generates migration files whose `up`/`down` functions
+    // always include `{ payload, req }` params even when unused.
+    // Ignore the entire migrations directory to avoid noise.
+    ignores: ['.next/', 'src/migrations/'],
   },
 ]
 

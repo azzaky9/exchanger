@@ -187,7 +187,7 @@ async function seed() {
   console.log('\n🌱  Seeding networks...\n')
 
   for (const network of networks) {
-    const { usdcContractAddress, usdcDecimals, chainId, ...payloadFields } = network
+    const { usdcContractAddress, usdcDecimals, chainId: _chainId, ...payloadFields } = network
 
     try {
       // Check for existing record to avoid duplicates

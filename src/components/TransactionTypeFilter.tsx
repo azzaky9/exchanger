@@ -16,18 +16,18 @@ export const TransactionTypeFilter: React.FC = () => {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const getActiveFromUrl = (): FilterValue => {
+  const getActiveFromUrl = useCallback((): FilterValue => {
     const val = searchParams.get('where[type][equals]')
     if (val === 'fiat_to_crypto' || val === 'crypto_to_fiat') return val
     return 'all'
-  }
+  }, [searchParams])
 
   // Keep local state in sync with URL — this prevents the glitch
   const [selected, setSelected] = useState<FilterValue>(getActiveFromUrl)
 
   useEffect(() => {
     setSelected(getActiveFromUrl())
-  }, [searchParams])
+  }, [searchParams, getActiveFromUrl])
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
