@@ -72,6 +72,62 @@ export default buildConfig({
     },
   }),
   sharp,
+  jobs: {
+    tasks: [
+      {
+        slug: 'disableExchangeRate',
+        handler: async ({ req }) => {
+          // `req.payload` is the correct way to access the Payload Local API inside a task handler.
+          // `input` only contains data you explicitly pass when queuing the job — not payload itself.
+          const { payload } = req
+          const exchangeRateRes = await payload.find({
+            collection: 'exchange-rates',
+            limit: 1,
+            sort: '-updatedAt',
+            overrideAccess: true,
+          })
+          if (exchangeRateRes.docs.length === 0) {
+            throw new Error('No exchange rate configured')
+          }
+
+          if (!exchangeRateRes.docs[0].isActive) {
+            throw new Error('Exchange rate is already disabled per 15 minutes')
+          }
+
+          const currentRate = exchangeRateRes.docs[0]
+          await payload.update({
+            collection: 'exchange-rates',
+            id: currentRate.id,
+            data: { isActive: false },
+            overrideAccess: true,
+          })
+
+          payload.logger.info(`[disableExchangeRate] Exchange rate ${currentRate.pair} disabled.`)
+          return { output: { success: true } }
+        },
+        onSuccess: async ({ req }) => {
+          req.payload.logger.info('[disableExchangeRate] Task completed successfully.')
+        },
+        schedule: [
+          {
+            // Jobs are queued to 'scheduled' every minute by this cron.
+            // They only *execute* once autoRun (below) polls the queue.
+            cron: '*/1 * * * *',
+            queue: 'scheduled',
+          },
+        ],
+      },
+    ],
+    // autoRun polls the 'scheduled' queue every minute and actually executes pending jobs.
+    // Without this, jobs accumulate in the database but never run.
+    autoRun: [
+      {
+        cron: '*/1 * * * *',
+        queue: 'scheduled',
+      },
+    ],
+  },
+
   plugins: [
     ...(shouldUseS3Storage
       ? [
