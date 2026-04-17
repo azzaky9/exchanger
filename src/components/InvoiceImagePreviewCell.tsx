@@ -47,15 +47,21 @@ export function InvoiceImagePreviewCell({ cellData, rowData }: DefaultCellCompon
         cursor: 'pointer',
       }}
     >
+      {}
+      {/* next/image requires all external hostnames (S3, CDN) to be whitelisted in
+          next.config remotePatterns. Using img here covers both local /media/ paths
+          and any S3 URL without extra config. This is admin-only, not a public LCP path. */}
       <img
         src={url}
         alt="Invoice proof"
+        title="Click to open full invoice"
         style={{
           width: 46,
           height: 46,
           objectFit: 'cover',
           borderRadius: 6,
           border: '1px solid var(--theme-elevation-200)',
+          display: 'block',
         }}
       />
     </button>

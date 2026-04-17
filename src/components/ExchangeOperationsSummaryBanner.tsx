@@ -27,6 +27,7 @@ type SummaryState = {
   totalExchange: number
   totalReceives: number
   totalRevenue: number
+  totalMargin: number
 }
 
 const INITIAL_SUMMARY: SummaryState = {
@@ -36,6 +37,7 @@ const INITIAL_SUMMARY: SummaryState = {
   totalExchange: 0,
   totalReceives: 0,
   totalRevenue: 0,
+  totalMargin: 0,
 }
 
 function parseCollectionSlug(pathname: string): string | null {
@@ -129,11 +131,15 @@ export function ExchangeOperationsSummaryBanner() {
         const data = (await res.json()) as { docs?: OperationDoc[] }
         const docs = Array.isArray(data?.docs) ? data.docs : []
 
+        // Determined here (inside run) so it's available during accumulation
+        const isFiatToCrypto = collectionSlug === 'fiat-to-crypto'
+
         let totalPending = 0
         let totalComplete = 0
         let totalExchange = 0
         let totalReceives = 0
         let totalRevenue = 0
+        let totalMargin = 0
 
         for (const doc of docs) {
           if (doc.status === 'pending') totalPending += 1
@@ -148,6 +154,17 @@ export function ExchangeOperationsSummaryBanner() {
             const txAmountReceive = Number(doc.transaction.amountUsdt ?? 0)
             if (!Number.isNaN(txAmountReceive)) {
               totalReceives += txAmountReceive
+            }
+
+            // Revenue:
+            // • Fiat→Crypto: sum amountUsdt ("Amount Received from Exchange" — USDT sent to user)
+            // • Crypto→Fiat: sum amountPhp  ("Lotto Sends" — PHP sent to user)
+            if (isFiatToCrypto) {
+              const received = Number(doc.transaction.amountUsdt ?? 0)
+              if (!Number.isNaN(received)) totalRevenue += received
+            } else {
+              const sends = Number(doc.transaction.amountPhp ?? 0)
+              if (!Number.isNaN(sends)) totalRevenue += sends
             }
           } else {
             const amount = Number(doc.amount ?? 0)
@@ -164,7 +181,7 @@ export function ExchangeOperationsSummaryBanner() {
           ) {
             const profit = Number(doc.transaction.profit ?? 0)
             if (!Number.isNaN(profit)) {
-              totalRevenue += profit
+              totalMargin += profit
             }
           }
         }
@@ -177,6 +194,7 @@ export function ExchangeOperationsSummaryBanner() {
             totalExchange,
             totalReceives,
             totalRevenue,
+            totalMargin,
           })
         }
       } catch {
@@ -236,7 +254,14 @@ export function ExchangeOperationsSummaryBanner() {
         <Card title="Total Pending" value={formatCount(summary.totalPending)} accent="#d97706" />
         <Card title="Total Complete" value={formatCount(summary.totalComplete)} accent="#16a34a" />
         {isAdmin ? (
-          <Card title="Total Revenue" value={formatUsdt(summary.totalRevenue)} accent="#0f766e" />
+          <>
+            <Card
+              title={isFiatToCryptoPage ? 'Total Revenue (USDT Received)' : 'Total Revenue (PHP Sent)'}
+              value={isFiatToCryptoPage ? formatUsdt(summary.totalRevenue) : formatPhp(summary.totalRevenue)}
+              accent="#0891b2"
+            />
+            <Card title="Total Margin" value={formatUsdt(summary.totalMargin)} accent="#0f766e" />
+          </>
         ) : (
           <>
             <Card title={receivesTitle} value={receivesValue} accent="#7c3aed" />
