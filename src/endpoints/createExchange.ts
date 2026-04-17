@@ -118,24 +118,53 @@ export const createExchangeEndpoint: Endpoint = {
 
     const treasury = treasuries[0]
 
-    // Fetch active exchange rate
+    // Fetch the most recent exchange rate regardless of isActive status.
+    // If the rate is inactive, the transaction will use the raw reference rates
+    // (no markup/spread applied) and be tagged with a note for auditing.
     const exchangeRateRes = await payload.find({
       collection: 'exchange-rates',
-      where: {
-        isActive: { equals: true },
-      },
       limit: 1,
+      sort: '-updatedAt',
       overrideAccess: true,
     })
 
     if (exchangeRateRes.docs.length === 0) {
-      throw new APIError('No active exchange rate found', 400)
+      throw new APIError('No exchange rate configured', 400)
     }
     const currentRate = exchangeRateRes.docs[0]
+    const rateIsActive = Boolean(currentRate.isActive)
+
+    // When the rate is inactive, override the applied rate with the reference rate
+    // so users transact at market price with no platform spread.
+    const effectivePhpToUsdtRate = rateIsActive
+      ? (currentRate.phpToUsdtRate ?? currentRate.phpToUsdtReferenceRate)
+      : currentRate.phpToUsdtReferenceRate
+    const effectiveUsdtToPhpRate = rateIsActive
+      ? (currentRate.usdtToPhpRate ?? currentRate.usdtToPhpReferenceRate)
+      : currentRate.usdtToPhpReferenceRate
 
     // Store the source amount in amountPhp for both flows.
     // crypto_to_fiat uses amountPhp as the source USDT amount inside the transaction hook.
     const amountPhp = amount
+
+    // Build snapshot overrides so the Transaction beforeChange hook applies the
+    // correct rates. When the rate is inactive we force referenceRate === appliedRate
+    // (zero spread) by passing the reference rate as both snapshots.
+    const snapshotOverrides =
+      type === 'fiat_to_crypto'
+        ? {
+            referenceRateSnapshot: currentRate.phpToUsdtReferenceRate,
+            appliedRateSnapshot: effectivePhpToUsdtRate,
+          }
+        : {
+            referenceRateSnapshot: currentRate.usdtToPhpReferenceRate,
+            appliedRateSnapshot: effectiveUsdtToPhpRate,
+          }
+
+    // Append an audit note when the reference rate is used
+    const rateNote = !rateIsActive
+      ? '[Reference rate used — exchange rate was inactive at time of creation]'
+      : null
 
     // Create the transaction
     const transaction = await payload.create({
@@ -150,6 +179,8 @@ export const createExchangeEndpoint: Endpoint = {
         bankDetails: bankDetailsFromEnv,
         treasury: treasury.id,
         status: 'pending',
+        notes: rateNote,
+        ...snapshotOverrides,
       },
       overrideAccess: true,
       req,
@@ -167,13 +198,15 @@ export const createExchangeEndpoint: Endpoint = {
 
     const appliedRate =
       type === 'fiat_to_crypto'
-        ? `1 PHP = ${currentRate.phpToUsdtRate} USDT`
-        : `1 USDT = ${currentRate.usdtToPhpRate} PHP`
+        ? `1 PHP = ${effectivePhpToUsdtRate} USDT`
+        : `1 USDT = ${effectiveUsdtToPhpRate} PHP`
 
     const depositAddress = type === 'crypto_to_fiat' ? treasury.walletAddress : null
 
     return Response.json({
       success: true,
+      /** 'reference' when the exchange rate was inactive; 'live' when active markup rates were applied. */
+      rateUsed: rateIsActive ? 'live' : 'reference',
       exchangeDetails: {
         userSends,
         userReceives,
@@ -193,7 +226,7 @@ export const createExchangeEndpoint: Endpoint = {
         type: transaction.type,
         amountPhp: type === 'crypto_to_fiat' ? transaction.amountUsdt : amountPhp,
         amountUsdt: type === 'crypto_to_fiat' ? transaction.amountPhp : transaction.amountUsdt,
-        networ:
+        network:
           typeof transaction.network === 'object'
             ? transaction.network.symbol
             : transaction.network,

@@ -140,3 +140,21 @@ Example: Reference = 58.50
 :::note
 While the Exchange Rates data can be publicly read via API (for display purposes on user-facing apps), all create/update/delete operations are admin-only.
 :::
+
+---
+
+## API Endpoints
+
+Three read-only endpoints are available under `/api/exchange-rates/` for programmatic access:
+
+| Endpoint | Returns | Active rate required? |
+| -------- | ------- | --------------------- |
+| [`GET /current`](/docs/exchange-rates/current-rate) | Markup-applied platform rates | ✅ Yes — 404 if inactive |
+| [`GET /reference-rate`](/docs/exchange-rates/reference-rate) | Raw market reference rates | ❌ No — always available |
+| `GET /live` | Real-time PHP → USD rate from external market API | ❌ No |
+
+:::tip
+If your app needs to display a rate at all times (including when the admin has disabled the
+configured rate), always call `/reference-rate` first and check its `isActive` field. If `true`,
+you can additionally show the markup-applied rates from `/current`.
+:::

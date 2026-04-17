@@ -1,4 +1,4 @@
-import { getExchangeRateEndpoint, getExchangeRatePublic } from '@/endpoints/getExchangeRate'
+import { getExchangeRateEndpoint, getExchangeRatePublic, getExchangeReferenceRate } from '@/endpoints/getExchangeRate'
 import type { Access, CollectionConfig } from 'payload'
 
 const isAdmin: Access = ({ req: { user } }) => user?.roles?.includes('admin') ?? false
@@ -33,7 +33,7 @@ export const ExchangeRate: CollectionConfig = {
     update: isAdmin,
     delete: isAdmin,
   },
-  endpoints: [getExchangeRateEndpoint, getExchangeRatePublic],
+  endpoints: [getExchangeRateEndpoint, getExchangeRatePublic, getExchangeReferenceRate],
   hooks: {
     /**
      * beforeChange resolves whichever field was the "source of truth" last.

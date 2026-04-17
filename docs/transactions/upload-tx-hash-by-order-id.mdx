@@ -1,0 +1,131 @@
+---
+title: Upload Transaction Hash by Order ID
+description: API guide for updating txHash using orderId on a crypto-to-fiat record.
+---
+
+import { Badge, Steps } from '@astrojs/starlight/components'
+
+# Upload Transaction Hash by Order ID
+
+<Badge text="API" variant="note" />
+<Badge text="Crypto to Fiat" variant="tip" />
+
+Use this endpoint to submit a blockchain transaction hash (`txHash`) for a crypto-to-fiat order using `orderId`.
+
+## Endpoint
+
+- **Method:** `POST`
+- **Path:** `/api/transactions/upload-tx/:orderId`
+- **Content-Type:** `application/json`
+
+## Authentication
+
+This endpoint requires an authenticated user.
+
+Allowed role:
+
+- `admin`
+
+Header format:
+
+```http
+Authorization: users API-Key YOUR_API_KEY
+```
+
+## Path Parameter
+
+| Name      | Type     | Required | Description                                  |
+| --------- | -------- | -------- | -------------------------------------------- |
+| `orderId` | `string` | Yes      | ID of the `crypto-to-fiat` record to update. |
+
+## Request Body
+
+| Field    | Type     | Required | Description                                        |
+| -------- | -------- | -------- | -------------------------------------------------- |
+| `txHash` | `string` | Yes      | On-chain transaction hash to save into the record. |
+
+Example body:
+
+```json
+{
+  "txHash": "0x8a8f6e1f5b7f0dc8c1a5bb56e95f9f7a72c6c39f0a4b11223344556677889900"
+}
+```
+
+## Behavior
+
+When request is valid, the API will:
+
+1. Validate `orderId` from route params
+2. Validate JSON body and ensure `txHash` is present
+3. Find record in `crypto-to-fiat`
+4. Verify caller role is `admin`
+5. Update `txHash` and return updated data
+
+## Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "ORDER_ID",
+    "txHash": "0x8a8f6e1f5b7f0dc8c1a5bb56e95f9f7a72c6c39f0a4b11223344556677889900"
+  }
+}
+```
+
+## Error Responses
+
+| Status | Message (example)       | Reason                          |
+| ------ | ----------------------- | ------------------------------- |
+| `400`  | `Invalid orderId`       | Missing/invalid route parameter |
+| `400`  | `txHash is required`    | Missing/empty txHash            |
+| `401`  | `Unauthorized`          | Missing auth                    |
+| `403`  | `Forbidden`             | Role is not admin               |
+| `404`  | `Order not found`       | No matching record              |
+| `500`  | `Internal server error` | Unexpected server error         |
+
+## Postman Quick Steps
+
+<Steps>
+1. Create `POST` request to:
+   `http://localhost:3000/api/transactions/upload-tx/{orderId}`
+2. Add header:
+   `Authorization: users API-Key YOUR_API_KEY`
+3. Add header:
+   `Content-Type: application/json`
+4. Open **Body** > **raw** > **JSON**.
+5. Paste:
+   `{ "txHash": "0xYOUR_HASH" }`
+6. Send request.
+</Steps>
+
+## cURL Example
+
+```bash
+curl --request POST \
+  --url "http://localhost:3000/api/transactions/upload-tx/ORDER_ID_HERE" \
+  --header "Authorization: users API-Key YOUR_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data "{\"txHash\":\"0xYOUR_HASH\"}"
+```
+
+## Browser/Client Example
+
+```ts
+async function uploadTxHash(orderId: string, txHash: string, apiKey: string) {
+  const res = await fetch(`/api/transactions/upload-tx/${encodeURIComponent(orderId)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `users API-Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ txHash }),
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error || 'Failed to update txHash')
+
+  return data
+}
+```

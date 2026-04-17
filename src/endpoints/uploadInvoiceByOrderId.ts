@@ -1,4 +1,5 @@
 import { APIError, type Endpoint } from 'payload'
+import { ExchangerType } from './constants'
 
 export const uploadInvoiceByOrderIdEndpoint: Endpoint = {
   path: '/upload-invoice/:orderId',
@@ -56,7 +57,7 @@ export const uploadInvoiceByOrderIdEndpoint: Endpoint = {
 
     const transaction = transactionResult.docs[0]
 
-    if (transaction.type !== 'crypto_to_fiat') {
+    if (transaction.type !== ExchangerType.Onramp) {
       throw new APIError('Invoice upload via orderId is only supported for crypto_to_fiat', 400)
     }
 

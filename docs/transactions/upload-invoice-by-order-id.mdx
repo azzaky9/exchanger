@@ -1,0 +1,129 @@
+---
+title: Upload Invoice by Order ID
+description: API guide for uploading an invoice image using orderId and linking it to a crypto-to-fiat transaction.
+---
+
+import { Badge, Steps } from '@astrojs/starlight/components';
+
+# Upload Invoice by Order ID
+
+<Badge text="API" variant="note" />
+<Badge text="Crypto to Fiat" variant="tip" />
+
+Use this endpoint to upload an invoice image by `orderId` and attach it to the matching transaction.
+
+## Endpoint
+
+- **Method:** `POST`
+- **Path:** `/api/transactions/upload-invoice/:orderId`
+- **Content-Type:** `multipart/form-data`
+
+## Authentication
+
+This endpoint requires an authenticated user.
+
+Supported roles:
+- `admin`
+- `user`
+
+Header format:
+
+```http
+Authorization: users API-Key YOUR_API_KEY
+```
+
+## Path Parameter
+
+| Name | Type | Required | Description |
+| ---- | ---- | -------- | ----------- |
+| `orderId` | `string` | Yes | Transaction order ID generated during exchange creation. |
+
+## Form Data
+
+| Key | Type | Required | Description |
+| --- | ---- | -------- | ----------- |
+| `file` | File | Yes | Invoice image to upload. |
+| `alt` | string | No | Alternative text for media record. Defaults to `Invoice image`. |
+
+## Behavior
+
+When request is valid, the API will:
+
+1. Find transaction by `orderId`
+2. Ensure transaction type is `crypto_to_fiat`
+3. Upload file to `media` collection
+4. Save uploaded media ID to `transactions.invoiceImage`
+5. Return upload + linkage metadata
+
+## Success Response
+
+```json
+{
+  "success": true,
+  "message": "Invoice image uploaded and linked successfully.",
+  "orderId": "f2fa2058-0c25-45b8-8b49-4df5fbc9e5c4",
+  "transactionId": 123,
+  "sendingRecordId": 456,
+  "media": {
+    "id": 789,
+    "url": "/media/invoice-abc.jpg"
+  }
+}
+```
+
+## Error Responses
+
+| Status | Message (example) | Reason |
+| ------ | ----------------- | ------ |
+| `400` | `'file' is required and must be a file upload` | Missing/invalid file field |
+| `400` | `orderId route parameter is required` | Missing route param |
+| `400` | `Invoice upload via orderId is only supported for crypto_to_fiat` | Wrong exchange type |
+| `401` | `Unauthorized` | Missing auth |
+| `403` | `Forbidden` | Role not allowed |
+| `404` | `Transaction not found for the given orderId` | Invalid order ID |
+
+## Postman Quick Steps
+
+<Steps>
+1. Create `POST` request to:
+   `http://localhost:3000/api/transactions/upload-invoice/{orderId}`
+2. Add header:
+   `Authorization: users API-Key YOUR_API_KEY`
+3. Open **Body** > **form-data**.
+4. Add `file` row and set type to **File**, then select image.
+5. Optional: add `alt` row as text.
+6. Send request.
+</Steps>
+
+## cURL Example
+
+```bash
+curl --request POST \
+  --url "http://localhost:3000/api/transactions/upload-invoice/ORDER_ID_HERE" \
+  --header "Authorization: users API-Key YOUR_API_KEY" \
+  --form "file=@/path/to/invoice.jpg" \
+  --form "alt=Invoice proof"
+```
+
+## Browser/Client Example
+
+```ts
+async function uploadInvoice(orderId: string, file: File, apiKey: string) {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('alt', 'Invoice proof')
+
+  const res = await fetch(`/api/transactions/upload-invoice/${encodeURIComponent(orderId)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `users API-Key ${apiKey}`,
+    },
+    body: form,
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.errors?.[0]?.message || data?.message || 'Upload failed')
+
+  return data
+}
+```

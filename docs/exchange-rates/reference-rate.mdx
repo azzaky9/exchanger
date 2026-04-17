@@ -1,0 +1,171 @@
+---
+title: Get Reference Rate
+description: API guide for fetching the raw market reference exchange rate regardless of whether the configured rate is active or inactive.
+---
+
+import { Badge, Aside, Steps } from '@astrojs/starlight/components';
+
+# Get Reference Rate
+
+<Badge text="API" variant="note" />
+<Badge text="Read-Only" variant="caution" />
+
+Fetch the **raw market reference rates** (USDT/PHP) that are always available, regardless of
+whether the platform's configured exchange rate is currently active or inactive.
+
+:::note
+This endpoint does **not** apply any markup or spread. The rates returned are the unmodified
+reference/market rates stored on the exchange rate record. When `isActive` is `false`, these
+are the rates that transaction creation will automatically fall back to.
+:::
+
+---
+
+## Endpoint
+
+- **Method:** `GET`
+- **Path:** `/api/exchange-rates/reference-rate`
+
+---
+
+## Authentication
+
+This endpoint requires an authenticated user (any role).
+
+```http
+Authorization: users API-Key YOUR_API_KEY
+```
+
+| Role    | Access |
+| ------- | ------ |
+| `admin` | ✅     |
+| `user`  | ✅     |
+| Guest   | ❌     |
+
+---
+
+## Response Fields
+
+| Field                    | Type      | Description                                                                                    |
+| ------------------------ | --------- | ---------------------------------------------------------------------------------------------- |
+| `phpToUsdtReferenceRate` | `number`  | Raw market rate: how much USDT 1 PHP converts to (e.g. `0.0000172`). No markup applied.       |
+| `usdtToPhpReferenceRate` | `number`  | Raw market rate: how much PHP 1 USDT converts to (e.g. `58.25`). No markup applied.           |
+| `isActive`               | `boolean` | Whether the platform's configured markup rate is currently active.                             |
+| `message`                | `string`  | Always `"Reference rate is Read-Only"` — confirms this endpoint is display/informational only. |
+| `updatedAt`              | `string`  | ISO 8601 timestamp of when the rate record was last updated.                                   |
+
+---
+
+## Success Response `200`
+
+```json
+{
+  "phpToUsdtReferenceRate": 0.000017167,
+  "usdtToPhpReferenceRate": 58.25,
+  "isActive": false,
+  "message": "Reference rate is Read-Only",
+  "updatedAt": "2026-04-17T07:30:00.000Z"
+}
+```
+
+---
+
+## Error Responses
+
+| Status | Message                        | Reason                                               |
+| ------ | ------------------------------ | ---------------------------------------------------- |
+| `401`  | `Unauthorized`                 | Missing or invalid API key / session.                |
+| `404`  | `No exchange rate configured`  | No exchange rate record exists in the database yet.  |
+| `500`  | `<error string>`               | Unexpected server error.                             |
+
+---
+
+## When to Use This Endpoint
+
+| Situation                                      | Use this endpoint? | Notes                                                                 |
+| ---------------------------------------------- | ------------------ | --------------------------------------------------------------------- |
+| Display a rate indicator when the rate is off  | ✅ Yes             | `isActive: false` means `/current` returns 404 — use this instead.   |
+| Pre-fill a quote screen before user submits    | ✅ Yes             | Reference rate is always available.                                   |
+| Create a transaction (via API)                 | ⚠️ Indirectly     | Transaction creation reads this automatically when `isActive: false`. |
+| Get the exact rate a user will transact at     | ❌ No              | Use [`/current`](/docs/exchange-rates/current-rate) when rate is active. |
+
+:::tip
+Check `isActive` in the response. If `false`, inform the user that **no platform markup is applied** and they are transacting at the raw market reference rate.
+:::
+
+---
+
+## cURL Example
+
+```bash
+curl --request GET \
+  --url "http://localhost:3000/api/exchange-rates/reference-rate" \
+  --header "Authorization: users API-Key YOUR_API_KEY"
+```
+
+---
+
+## TypeScript / Fetch Example
+
+```ts
+interface ReferenceRateResponse {
+  phpToUsdtReferenceRate: number
+  usdtToPhpReferenceRate: number
+  isActive: boolean
+  message: string
+  updatedAt: string
+}
+
+async function getReferenceRate(apiKey: string): Promise<ReferenceRateResponse> {
+  const res = await fetch('/api/exchange-rates/reference-rate', {
+    method: 'GET',
+    headers: {
+      Authorization: `users API-Key ${apiKey}`,
+    },
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error ?? 'Failed to fetch reference rate')
+
+  return data as ReferenceRateResponse
+}
+```
+
+---
+
+## Postman Quick Steps
+
+<Steps>
+1. Create a `GET` request to:
+   `http://localhost:3000/api/exchange-rates/reference-rate`
+2. Add a header:
+   `Authorization: users API-Key YOUR_API_KEY`
+3. Send the request — no request body required.
+4. Check `isActive` in the response:
+   - `true` → the configured markup rate is live; you may also call [`/current`](/docs/exchange-rates/current-rate).
+   - `false` → the reference rate below is what all new transactions will use.
+</Steps>
+
+---
+
+## How It Relates to Transaction Creation
+
+When a user calls `POST /api/transactions/create-exchange` and the exchange rate has `isActive: false`:
+
+1. The transaction endpoint fetches the latest rate (regardless of `isActive`).
+2. It detects `isActive: false`.
+3. **`appliedRateSnapshot`** is set equal to **`referenceRateSnapshot`** → zero spread / zero markup.
+4. The transaction's `notes` field is stamped with `[Reference rate used — exchange rate was inactive at time of creation]`.
+5. The response includes `"rateUsed": "reference"` so clients can show an appropriate notice.
+
+This means **users can always create transactions** — they simply trade at market price when the configured rate is inactive.
+
+---
+
+## Related Endpoints
+
+| Endpoint                               | Purpose                                              |
+| -------------------------------------- | ---------------------------------------------------- |
+| `GET /api/exchange-rates/current`      | Returns markup-applied rates (only when active).     |
+| `GET /api/exchange-rates/live`         | Fetches live PHP → USD from an external market API.  |
+| `POST /api/transactions/create-exchange` | Creates a transaction; falls back to this rate when inactive. |

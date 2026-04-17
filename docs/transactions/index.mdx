@@ -3,7 +3,7 @@ title: Transactions
 description: Complete guide to creating and managing exchange transactions in the Exchanger admin panel.
 ---
 
-import { Steps, Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside, Badge, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
 
 # 💱 Transactions
 
@@ -147,3 +147,10 @@ These are read-only from the transaction form. To update them directly, go to th
 | Create   | ✅    | ❌   |
 | Update   | ✅    | ❌   |
 | Delete   | ✅    | ❌   |
+
+---
+
+## Related API Guides
+
+- [Upload Invoice by Order ID](/transactions/upload-invoice-by-order-id/) - Upload invoice image by `orderId` and attach it to a `crypto_to_fiat` transaction.
+- [Upload Transaction Hash by Order ID](/transactions/upload-tx-hash-by-order-id/) - Update `txHash` for a `crypto_to_fiat` order (admin only).
