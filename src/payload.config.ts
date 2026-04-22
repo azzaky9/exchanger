@@ -136,7 +136,9 @@ export default buildConfig({
       ? [
           s3Storage({
             collections: {
-              media: true,
+              media: {
+                prefix: process.env.S3_ROOT_PATH
+              },
             },
             bucket: s3Bucket || '',
             config: {
