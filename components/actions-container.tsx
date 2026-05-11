@@ -7,8 +7,9 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useTransition } from "react"
+import { useCallback, useEffect, useState, useTransition } from "react"
 
+import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
 
 // ─── Currency options ────────────────────────────────────────────────────────
@@ -25,13 +26,15 @@ interface ActionsContainerProps {
   currencyKey?: string
   /** Available currency options */
   currencies?: readonly string[]
+  /** Debounce delay in ms for the search input (default: 350) */
+  searchDelay?: number
   className?: string
 }
 
 /**
  * A reusable toolbar with a search input, filter toggle button, and a currency
- * dropdown. Every interaction pushes the updated value to the URL as a query
- * param so the state is shareable and survives a page refresh.
+ * dropdown. The search input is debounced — URL params are only pushed after
+ * the user stops typing for `searchDelay` ms.
  *
  * @example
  * // In any page:
@@ -42,15 +45,21 @@ export function ActionsContainer({
   filterKey = "filter",
   currencyKey = "currency",
   currencies = CURRENCY_OPTIONS,
+  searchDelay = 350,
   className,
 }: ActionsContainerProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
-  const currentSearch = searchParams.get(searchKey) ?? ""
   const filterActive = searchParams.get(filterKey) === "1"
   const currentCurrency = (searchParams.get(currencyKey) ?? "ALL") as Currency
+
+  // ── Search: local state updates immediately, URL is pushed after debounce ──
+  const [inputValue, setInputValue] = useState(
+    searchParams.get(searchKey) ?? ""
+  )
+  const debouncedSearch = useDebounce(inputValue, searchDelay)
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
   const pushParam = useCallback(
@@ -68,9 +77,15 @@ export function ActionsContainer({
     [router, searchParams]
   )
 
+  // Push debounced search value to URL
+  useEffect(() => {
+    pushParam(searchKey, debouncedSearch || null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch])
+
   // ─── Handlers ────────────────────────────────────────────────────────────
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    pushParam(searchKey, e.target.value || null)
+    setInputValue(e.target.value)
   }
 
   const handleFilter = () => {
@@ -104,11 +119,11 @@ export function ActionsContainer({
           id="actions-search"
           type="text"
           placeholder="Search"
-          value={currentSearch}
+          value={inputValue}
           onChange={handleSearch}
           className={cn(
             "min-w-0 flex-1 bg-transparent text-xs font-normal text-[#4e4e4e]",
-            "placeholder:text-[#4e4e4e] outline-none"
+            "outline-none placeholder:text-[#4e4e4e]"
           )}
         />
       </label>

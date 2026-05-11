@@ -3,7 +3,7 @@ import * as React from "react"
 
 interface CardGridProps {
   /** Maximum number of columns at the widest breakpoint (default: 4) */
-  cols?: 1 | 2 | 3 | 4
+  cols?: 1 | 2 | 3 | 4 | 5
   className?: string
   children: React.ReactNode
 }
@@ -13,6 +13,7 @@ const colsMap: Record<number, string> = {
   2: "@xl/main:grid-cols-2",
   3: "@xl/main:grid-cols-2 @5xl/main:grid-cols-3",
   4: "@xl/main:grid-cols-2 @5xl/main:grid-cols-4",
+  5: "@xl/main:grid-cols-2 @5xl/main:grid-cols-5",
 }
 
 /**

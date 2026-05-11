@@ -1,17 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import {
-  ChartDownIcon,
-  ChartUpIcon,
-  HugeiconsFreeIcons,
-} from "@hugeicons/core-free-icons"
 import Image from "next/image"
-
-const imgIconUp =
-  "http://localhost:3845/assets/34f61a426f5e9c78477914e630a0d37a2eca7cb2.svg"
-const imgIconUsdt =
-  "http://localhost:3845/assets/2887e2afdc374d6018870d1f284af79e768eb09c.svg"
 
 interface RevenueCardProps {
   title?: string
@@ -29,12 +19,11 @@ export function RevenueCard({
   amount = "0.00",
   percentageChange = "3.27%",
   isPositive = true,
-  description = "Fiat → Crypto transactions",
+  description,
   className,
   withEndLabel = true,
   withUSDTIcon = true,
 }: RevenueCardProps) {
-  console.log("withEndLabel =", withEndLabel)
   return (
     <div
       className={cn(
@@ -56,7 +45,7 @@ export function RevenueCard({
             className={cn(
               "flex items-center gap-1 rounded border px-2 py-1.5 text-xs font-medium whitespace-nowrap",
               isPositive
-                ? "border-[#2f3e1c] bg-[rgba(131,176,71,0.04)] text-[#83b047]"
+                ? "border-[#090f01] bg-[rgba(131,176,71,0.04)] text-[#83b047]"
                 : "border-[#3e1c1c] bg-[rgba(255,80,80,0.04)] text-[#E38752]"
             )}
           >
@@ -88,16 +77,18 @@ export function RevenueCard({
               <img
                 alt="USDT"
                 className="absolute inset-0 block size-full"
-                src={imgIconUsdt}
+                src={"/icon_usdt.png"}
               />
             </div>
           )}
         </div>
 
         {/* Description */}
-        <p className="text-sm leading-normal font-medium whitespace-nowrap text-[#4e4e4e]">
-          {description}
-        </p>
+        {description && (
+          <p className="text-sm leading-normal font-medium whitespace-nowrap text-[#4e4e4e]">
+            {description}
+          </p>
+        )}
       </div>
     </div>
   )

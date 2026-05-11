@@ -93,7 +93,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { DragDropVerticalIcon, CheckmarkCircle01Icon, Loading03Icon, MoreVerticalCircle01Icon, LeftToRightListBulletIcon, ArrowDown01Icon, Add01Icon, ArrowLeftDoubleIcon, ArrowLeft01Icon, ArrowRight01Icon, ArrowRightDoubleIcon, ChartUpIcon } from "@hugeicons/core-free-icons"
+import { DragDropVerticalIcon, CheckmarkCircle01Icon, Loading03Icon, MoreVerticalCircle01Icon, LeftToRightListBulletIcon, ArrowDown01Icon, Add01Icon, ArrowLeftDoubleIcon, ArrowLeft01Icon, ArrowRight01Icon, ArrowRightDoubleIcon, ChartUpIcon, ArrowUpDownIcon, SortByUp01Icon, SortByDown01Icon } from "@hugeicons/core-free-icons"
 
 export const schema = z.object({
   id: z.number(),
@@ -327,12 +327,27 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   )
 }
 
-export function DataTable({
-  data: initialData,
-}: {
-  data: z.infer<typeof schema>[]
-}) {
-  const [data, setData] = React.useState(() => initialData)
+// ─── Generic DataTable ────────────────────────────────────────────────────────
+// Accepts any column definitions and data — sorting, filtering, pagination,
+// and column-visibility are all wired up automatically.
+
+interface DataTableProps<TData> {
+  columns: ColumnDef<TData>[]
+  data: TData[]
+  /** Placeholder text when there are no rows */
+  emptyMessage?: string
+  /** Default page size (default: 10) */
+  pageSize?: number
+  className?: string
+}
+
+export function DataTable<TData>({
+  columns,
+  data,
+  emptyMessage = "No results.",
+  pageSize = 10,
+  className,
+}: DataTableProps<TData>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -342,19 +357,8 @@ export function DataTable({
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize,
   })
-  const sortableId = React.useId()
-  const sensors = useSensors(
-    useSensor(MouseSensor, {}),
-    useSensor(TouchSensor, {}),
-    useSensor(KeyboardSensor, {})
-  )
-
-  const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
-    [data]
-  )
 
   const table = useReactTable({
     data,
@@ -366,7 +370,6 @@ export function DataTable({
       columnFilters,
       pagination,
     },
-    getRowId: (row) => row.id.toString(),
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -381,245 +384,217 @@ export function DataTable({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (active && over && active.id !== over.id) {
-      setData((data) => {
-        const oldIndex = dataIds.indexOf(active.id)
-        const newIndex = dataIds.indexOf(over.id)
-        return arrayMove(data, oldIndex, newIndex)
-      })
-    }
-  }
-
   return (
-    <Tabs
-      defaultValue="outline"
-      className="w-full flex-col justify-start gap-6"
-    >
-      <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-        <Select defaultValue="outline">
-          <SelectTrigger
-            className="flex w-fit @4xl/main:hidden"
-            size="sm"
-            id="view-selector"
-          >
-            <SelectValue placeholder="Select a view" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="outline">Outline</SelectItem>
-              <SelectItem value="past-performance">Past Performance</SelectItem>
-              <SelectItem value="key-personnel">Key Personnel</SelectItem>
-              <SelectItem value="focus-documents">Focus Documents</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <TabsList className="hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="outline">Outline</TabsTrigger>
-          <TabsTrigger value="past-performance">
-            Past Performance <Badge variant="secondary">3</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="key-personnel">
-            Key Personnel <Badge variant="secondary">2</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="focus-documents">Focus Documents</TabsTrigger>
-        </TabsList>
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <HugeiconsIcon icon={LeftToRightListBulletIcon} strokeWidth={2} data-icon="inline-start" />
-                Columns
-                <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} data-icon="inline-end" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-32">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
-                )
-                .map((column) => {
+    <div className={className}>
+      {/* ── Column visibility toggle ── */}
+      <div className="flex items-center justify-end pb-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <HugeiconsIcon
+                icon={LeftToRightListBulletIcon}
+                strokeWidth={2}
+                data-icon="inline-start"
+              />
+              Columns
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                strokeWidth={2}
+                data-icon="inline-end"
+              />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-32">
+            {table
+              .getAllColumns()
+              .filter(
+                (column) =>
+                  typeof column.accessorFn !== "undefined" &&
+                  column.getCanHide()
+              )
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  className="capitalize"
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                >
+                  {column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* ── Table ── */}
+      <div className="overflow-hidden rounded-lg border border-[#282828]">
+        <Table>
+          <TableHeader className="bg-[#1e1e1e]">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow
+                key={headerGroup.id}
+                className="border-[#282828] hover:bg-transparent"
+              >
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort()
+                  const sorted = header.column.getIsSorted()
                   return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
+                    <TableHead
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      className="py-2 text-[11px] font-medium uppercase tracking-wide text-[#ededed]"
+                      onClick={
+                        canSort
+                          ? header.column.getToggleSortingHandler()
+                          : undefined
                       }
+                      style={{ cursor: canSort ? "pointer" : undefined }}
                     >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
+                      {header.isPlaceholder ? null : (
+                        <div className="flex select-none items-center gap-1">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {canSort && (
+                            <HugeiconsIcon
+                              icon={
+                                sorted === "asc"
+                                  ? SortByUp01Icon
+                                  : sorted === "desc"
+                                    ? SortByDown01Icon
+                                    : ArrowUpDownIcon
+                              }
+                              size={12}
+                              strokeWidth={1.5}
+                              className={
+                                sorted ? "text-[#ededed]" : "text-[#4e4e4e]"
+                              }
+                            />
+                          )}
+                        </div>
+                      )}
+                    </TableHead>
                   )
                 })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-            <span className="hidden lg:inline">Add Section</span>
-          </Button>
+              </TableRow>
+            ))}
+          </TableHeader>
+
+          <TableBody>
+            {table.getRowModel().rows.length > 0 ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                  className="border-[#1e1e1e] text-[#ededed] transition-colors hover:bg-[#1a1a1a]"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="py-3">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-xs text-[#4e4e4e]"
+                >
+                  {emptyMessage}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* ── Pagination ── */}
+      <div className="flex items-center justify-between pt-3">
+        <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+        <div className="flex w-full items-center gap-8 lg:w-fit">
+          <div className="hidden items-center gap-2 lg:flex">
+            <Label htmlFor="rows-per-page" className="text-sm font-medium">
+              Rows per page
+            </Label>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(value) => table.setPageSize(Number(value))}
+            >
+              <SelectTrigger size="sm" className="w-20" id="rows-per-page">
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectGroup>
+                  {[10, 20, 30, 40, 50].map((ps) => (
+                    <SelectItem key={ps} value={`${ps}`}>
+                      {ps}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-fit items-center justify-center text-sm font-medium">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
+          </div>
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            <Button
+              variant="outline"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Go to first page</span>
+              <HugeiconsIcon icon={ArrowLeftDoubleIcon} strokeWidth={2} />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+            </Button>
+            <Button
+              variant="outline"
+              className="size-8"
+              size="icon"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Go to next page</span>
+              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
+            </Button>
+            <Button
+              variant="outline"
+              className="hidden size-8 lg:flex"
+              size="icon"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Go to last page</span>
+              <HugeiconsIcon icon={ArrowRightDoubleIcon} strokeWidth={2} />
+            </Button>
+          </div>
         </div>
       </div>
-      <TabsContent
-        value="outline"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-      >
-        <div className="overflow-hidden rounded-lg border">
-          <DndContext
-            collisionDetection={closestCenter}
-            modifiers={[restrictToVerticalAxis]}
-            onDragEnd={handleDragEnd}
-            sensors={sensors}
-            id={sortableId}
-          >
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-muted">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <TableHead key={header.id} colSpan={header.colSpan}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      )
-                    })}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody className="**:data-[slot=table-cell]:first:w-8">
-                {table.getRowModel().rows?.length ? (
-                  <SortableContext
-                    items={dataIds}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {table.getRowModel().rows.map((row) => (
-                      <DraggableRow key={row.id} row={row} />
-                    ))}
-                  </SortableContext>
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
-                      No results.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </DndContext>
-        </div>
-        <div className="flex items-center justify-between px-4">
-          <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
-            <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
-              </Label>
-              <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value))
-                }}
-              >
-                <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  <SelectGroup>
-                    {[10, 20, 30, 40, 50].map((pageSize) => (
-                      <SelectItem key={pageSize} value={`${pageSize}`}>
-                        {pageSize}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
-            </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Go to first page</span>
-                <HugeiconsIcon icon={ArrowLeftDoubleIcon} strokeWidth={2} />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Go to previous page</span>
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
-              </Button>
-              <Button
-                variant="outline"
-                className="size-8"
-                size="icon"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Go to next page</span>
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
-              </Button>
-              <Button
-                variant="outline"
-                className="hidden size-8 lg:flex"
-                size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Go to last page</span>
-                <HugeiconsIcon icon={ArrowRightDoubleIcon} strokeWidth={2} />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </TabsContent>
-      <TabsContent
-        value="past-performance"
-        className="flex flex-col px-4 lg:px-6"
-      >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="key-personnel" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent
-        value="focus-documents"
-        className="flex flex-col px-4 lg:px-6"
-      >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-    </Tabs>
+    </div>
   )
 }
+
 
 const chartData = [
   { month: "January", desktop: 186, mobile: 80 },

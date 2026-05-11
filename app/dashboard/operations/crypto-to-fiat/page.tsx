@@ -1,11 +1,8 @@
 import { Suspense } from "react"
 
 import { ActionsContainer } from "@/components/actions-container"
-import {
-  DashboardStatsCard,
-  ProfitChart,
-  RecentTransactions,
-} from "@/components/dashboard"
+import { OperationStatsCard } from "@/components/operations/stats-ops-card"
+import { OfframpTable } from "@/components/operations/offramp-table"
 
 export default function Page() {
   return (
@@ -14,7 +11,12 @@ export default function Page() {
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
           {/* Header row */}
           <div className="flex items-center justify-between">
-            <p className="text-base font-semibold">Finance Overview</p>
+            <p className="text-base font-semibold">Crypto to Fiat Overview</p>
+          </div>
+          <OperationStatsCard />
+
+          <div className="flex items-center justify-between">
+            <p className="text-base font-semibold">Transactions</p>
             <Suspense>
               <ActionsContainer
                 searchKey="q"
@@ -24,20 +26,7 @@ export default function Page() {
             </Suspense>
           </div>
 
-          {/* Stat cards */}
-          <DashboardStatsCard />
-
-          {/* Daily Profit Breakdown chart */}
-          <ProfitChart />
-
-          {/* Recent Transactions table */}
-          <Suspense>
-            <RecentTransactions
-              searchKey="q"
-              filterKey="filter"
-              currencyKey="currency"
-            />
-          </Suspense>
+          <OfframpTable />
         </div>
       </div>
     </div>
