@@ -153,7 +153,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
-  roles: ('admin' | 'user' | 'arca')[];
+  roles: ('admin' | 'user' | 'arca' | 'gic')[];
   updatedAt: string;
   createdAt: string;
   enableAPIKey?: boolean | null;
@@ -183,6 +183,7 @@ export interface User {
 export interface Media {
   id: number;
   alt: string;
+  prefix?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -366,6 +367,14 @@ export interface ExchangeRate {
    * Fixed pair for this exchange rate configuration.
    */
   pair: string;
+  /**
+   * Flat fee deducted from the USDT→PHP reference rate.
+   */
+  usdtToPhpSpinzoFee: number;
+  /**
+   * Flat fee deducted from the USDT→PHP reference rate.
+   */
+  usdtToPhpGicFee: number;
   usdtToPhpReferenceRate: number;
   usdtToPhpRate: number;
   usdtToPhpMarkupPercentage?: number | null;
@@ -373,6 +382,14 @@ export interface ExchangeRate {
   usdtToPhpSpreadPercentage?: number | null;
   phpToUsdtReferenceRate: number;
   phpToUsdtSpread?: number | null;
+  /**
+   * Flat fee deducted from the PHP→USDT reference rate.
+   */
+  phpToUsdtSpinzoFee: number;
+  /**
+   * Flat fee deducted from the PHP→USDT reference rate.
+   */
+  phpToUsdtGicFee: number;
   phpToUsdtRate: number;
   phpToUsdtMarkupPercentage?: number | null;
   phpToUsdtSpreadPercentage?: number | null;
@@ -724,6 +741,7 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  prefix?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -825,6 +843,8 @@ export interface BatchesSelect<T extends boolean = true> {
  */
 export interface ExchangeRatesSelect<T extends boolean = true> {
   pair?: T;
+  usdtToPhpSpinzoFee?: T;
+  usdtToPhpGicFee?: T;
   usdtToPhpReferenceRate?: T;
   usdtToPhpRate?: T;
   usdtToPhpMarkupPercentage?: T;
@@ -832,6 +852,8 @@ export interface ExchangeRatesSelect<T extends boolean = true> {
   usdtToPhpSpreadPercentage?: T;
   phpToUsdtReferenceRate?: T;
   phpToUsdtSpread?: T;
+  phpToUsdtSpinzoFee?: T;
+  phpToUsdtGicFee?: T;
   phpToUsdtRate?: T;
   phpToUsdtMarkupPercentage?: T;
   phpToUsdtSpreadPercentage?: T;

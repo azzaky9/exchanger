@@ -51,7 +51,12 @@ export const Received: CollectionConfig = {
       'exchangeAction',
     ],
     group: 'Transactions',
-    hidden: ({ user }) => !(user?.roles?.includes('user') || user?.roles?.includes('admin')),
+    hidden: ({ user }) =>
+      !(
+        user?.roles?.includes('user') ||
+        user?.roles?.includes('admin') ||
+        user?.roles?.includes('gic')
+      ),
   },
   endpoints: [markFiatToCryptoSendingEndpoint],
   access: {
@@ -69,7 +74,11 @@ export const Received: CollectionConfig = {
       admin: {
         condition: (data, _, { user }) =>
           Boolean(data?.id) &&
-          Boolean(user?.roles?.includes('admin') || user?.roles?.includes('user')),
+          Boolean(
+            user?.roles?.includes('admin') ||
+            user?.roles?.includes('user') ||
+            user?.roles?.includes('gic'),
+          ),
         components: {
           Cell: '/components/ExchangeActionFiatToCryptoCell#ExchangeActionFiatToCryptoCell',
         },

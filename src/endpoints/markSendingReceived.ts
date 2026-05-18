@@ -17,7 +17,7 @@ export const markSendingReceivedEndpoint: Endpoint = {
     }
 
     const isAllowed =
-      user.roles?.includes('user') || user.roles?.includes('admin') || user.roles?.includes('arca')
+      user.roles?.includes('user') || user.roles?.includes('admin') || user.roles?.includes('arca') || user.roles?.includes('gic')
     if (!isAllowed) {
       throw new APIError('Forbidden', 403)
     }

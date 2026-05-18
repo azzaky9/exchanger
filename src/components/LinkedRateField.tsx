@@ -3,12 +3,12 @@
 /**
  * LinkedRateField.tsx
  *
- * A Payload CMS custom UI field that renders a paired "Rate ↔ Percentage"
+ * A Payload CMS custom UI field that renders a paired "Rate ↔ Fees"
  * editor for both exchange directions.
  *
- * It intercepts changes to either the rate or the markup percentage and
- * immediately recalculates the sibling field on the client side so the
- * admin can see the effect before saving.
+ * It intercepts changes to the fees (spinzoFee, gicFee) and immediately
+ * recalculates the final rate on the client side so the admin can see
+ * the effect before saving.
  *
  * It also stamps `_lastEdited` onto the form so the `beforeChange` hook
  * knows which field was the source of truth.
@@ -50,7 +50,7 @@ const styles = {
 
   rowSecondary: {
     display: 'grid',
-    gridTemplateColumns: '1fr auto 1fr',
+    gridTemplateColumns: '1fr 1fr',
     gap: '12px',
     alignItems: 'end',
     marginTop: '10px',
@@ -147,15 +147,28 @@ function round(n: number, decimals: number) {
   return Math.round(n * factor) / factor
 }
 
-// Derive final rate from reference + discount markup.
-function pctToRate(referenceRate: number, pct: number): number {
-  return round(referenceRate * (1 - pct / 100), 6)
-}
-
-// Derive markup% from reference and final rate.
-function rateToPct(referenceRate: number, rate: number): number {
-  if (referenceRate === 0) return 0
-  return round((Math.abs(referenceRate - rate) / referenceRate) * 100, 2)
+/**
+ * Derive final rate from reference - fees.
+ *
+ * USDT→PHP (crossRefRate undefined): direct subtraction
+ *   finalRate = refRate - spinzoFee - gicFee
+ *
+ * PHP→USDT (crossRefRate = usdtToPhpRefRate): proportional conversion
+ *   finalRate = refRate × (1 - totalFee / crossRefRate)
+ */
+function feesToRate(
+  referenceRate: number,
+  spinzoFee: number,
+  gicFee: number,
+  crossRefRate?: number,
+): number {
+  const totalFee = spinzoFee + gicFee
+  if (crossRefRate && crossRefRate > 0) {
+    // PHP→USDT: proportional conversion so rate can't go negative
+    return round(referenceRate * (1 - totalFee / crossRefRate), 6)
+  }
+  // USDT→PHP: direct subtraction
+  return round(referenceRate - totalFee, 6)
 }
 
 // ─── core linked editor ───────────────────────────────────────────────────────
@@ -167,23 +180,28 @@ interface LinkedRateEditorProps {
   referenceFieldPath: string
   /** Payload field path for the final rate, e.g. "usdtToPhpRate" */
   rateFieldPath: string
-  /** Payload field path for the markup %, e.g. "usdtToPhpMarkupPercentage" */
-  pctFieldPath: string
   /** Human labels */
   referenceLabel: string
   rateLabel: string
-  pctLabel: string
   spreadLabel: string
   spreadPctLabel: string
   /** Which `_lastEdited` sentinel value to stamp */
   referenceKey: string
   rateKey: string
-  pctKey: string
   /** Optional spread persistence paths */
   spreadFieldPath?: string
   spreadPctFieldPath?: string
   /** Description of the rate unit */
   rateUnit: string
+  /**
+   * For PHP→USDT, pass the field path of the USDT→PHP reference rate
+   * so fees can be proportionally converted. Leave undefined for USDT→PHP.
+   */
+  crossReferenceFieldPath?: string
+  /** Payload field path for the spinzo fee (per-direction), e.g. 'usdtToPhpSpinzoFee' */
+  spinzoFeeFieldPath: string
+  /** Payload field path for the gic fee (per-direction), e.g. 'usdtToPhpGicFee' */
+  gicFeeFieldPath: string
 }
 
 function ArrowIcon() {
@@ -204,44 +222,59 @@ function LinkedRateEditor({
   heading,
   referenceFieldPath,
   rateFieldPath,
-  pctFieldPath,
   referenceLabel,
   rateLabel,
-  pctLabel,
   spreadLabel,
   spreadPctLabel,
   referenceKey,
   rateKey,
-  pctKey,
   spreadFieldPath,
   spreadPctFieldPath,
   rateUnit,
+  crossReferenceFieldPath,
+  spinzoFeeFieldPath,
+  gicFeeFieldPath,
 }: LinkedRateEditorProps) {
   const { dispatchFields, setModified } = useForm()
   const { setValue: setLastEdited } = useField<string>({ path: '_lastEdited' })
 
-  // Subscribe to the three relevant fields
+  // Subscribe to the relevant fields
   const referenceRateField = useFormFields(([fields]) => fields[referenceFieldPath])
   const rateField = useFormFields(([fields]) => fields[rateFieldPath])
-  const pctField = useFormFields(([fields]) => fields[pctFieldPath])
+  const spinzoFeeField = useFormFields(([fields]) => fields[spinzoFeeFieldPath])
+  const gicFeeField = useFormFields(([fields]) => fields[gicFeeFieldPath])
+  // For PHP→USDT, we need the USDT→PHP reference rate for proportional conversion
+  const crossRefField = useFormFields(([fields]) =>
+    crossReferenceFieldPath ? fields[crossReferenceFieldPath] : undefined,
+  )
 
   const referenceRate = Number(referenceRateField?.value ?? 0)
-
   const rateValue = Number(rateField?.value ?? 0)
-  const pctValue = Number(pctField?.value ?? 0)
+  const spinzoFee = Number(spinzoFeeField?.value ?? 0)
+  const gicFee = Number(gicFeeField?.value ?? 0)
+  const crossRefRate = crossRefField ? Number(crossRefField.value ?? 0) : undefined
 
+  // spread: USDT→PHP uses totalFee directly; PHP→USDT converts proportionally
   const spreadValue = useMemo(() => {
-    if (referenceRate <= 0 || rateValue <= 0) return 0
-    return round(Math.abs(referenceRate - rateValue), 6)
-  }, [referenceRate, rateValue])
+    const totalFee = spinzoFee + gicFee
+    if (crossRefRate && crossRefRate > 0) {
+      // PHP→USDT: spread = refRate × totalFee / crossRefRate
+      return round(referenceRate * totalFee / crossRefRate, 6)
+    }
+    // USDT→PHP: spread = totalFee
+    return round(totalFee, 6)
+  }, [spinzoFee, gicFee, referenceRate, crossRefRate])
 
+  // spreadPct: symmetric for both directions = totalFee / usdtToPhpRefRate * 100
   const spreadPctValue = useMemo(() => {
-    if (referenceRate <= 0 || rateValue <= 0) return 0
-    return round((spreadValue / referenceRate) * 100, 2)
-  }, [referenceRate, rateValue, spreadValue])
+    // For USDT→PHP: totalFee / refRate; for PHP→USDT: totalFee / crossRefRate
+    const denominator = crossRefRate && crossRefRate > 0 ? crossRefRate : referenceRate
+    if (denominator <= 0) return 0
+    return round(((spinzoFee + gicFee) / denominator) * 100, 2)
+  }, [referenceRate, crossRefRate, spinzoFee, gicFee])
 
   // Track which input the user last touched so we don't create feedback loops
-  const lastTouched = useRef<'reference' | 'rate' | 'pct' | null>(null)
+  const lastTouched = useRef<'reference' | 'rate' | 'fee' | null>(null)
 
   const dispatch = useCallback(
     (path: string, value: number | string) => {
@@ -257,16 +290,12 @@ function LinkedRateEditor({
     if (spreadPctFieldPath) dispatch(spreadPctFieldPath, spreadPctValue)
   }, [spreadFieldPath, spreadPctFieldPath, spreadValue, spreadPctValue, dispatch])
 
-  // Recalculate dependent value when reference changes.
+  // Recalculate final rate when reference changes.
   const prevRefRate = useRef(referenceRate)
   useEffect(() => {
     if (referenceRate > 0 && referenceRate !== prevRefRate.current) {
-      if (lastTouched.current === 'rate') {
-        const newPct = rateToPct(referenceRate, rateValue)
-        dispatch(pctFieldPath, newPct)
-        setLastEdited(rateKey)
-      } else {
-        const newRate = pctToRate(referenceRate, pctValue)
+      if (lastTouched.current !== 'rate') {
+        const newRate = feesToRate(referenceRate, spinzoFee, gicFee, crossRefRate)
         dispatch(rateFieldPath, newRate)
         setLastEdited(referenceKey)
       }
@@ -274,15 +303,28 @@ function LinkedRateEditor({
     prevRefRate.current = referenceRate
   }, [
     referenceRate,
-    rateValue,
-    pctValue,
+    spinzoFee,
+    gicFee,
+    crossRefRate,
     rateFieldPath,
-    pctFieldPath,
     referenceKey,
-    rateKey,
     dispatch,
     setLastEdited,
   ])
+
+  // Recalculate final rate when fees change.
+  const prevFees = useRef({ spinzoFee, gicFee })
+  useEffect(() => {
+    if (
+      referenceRate > 0 &&
+      (spinzoFee !== prevFees.current.spinzoFee || gicFee !== prevFees.current.gicFee)
+    ) {
+      const newRate = feesToRate(referenceRate, spinzoFee, gicFee, crossRefRate)
+      dispatch(rateFieldPath, newRate)
+      setLastEdited(spinzoFeeFieldPath) // signal fee-driven change
+    }
+    prevFees.current = { spinzoFee, gicFee }
+  }, [referenceRate, spinzoFee, gicFee, crossRefRate, rateFieldPath, dispatch, setLastEdited])
 
   const handleReferenceChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -293,13 +335,13 @@ function LinkedRateEditor({
       dispatch(referenceFieldPath, newReference)
 
       if (newReference > 0) {
-        const newRate = pctToRate(newReference, pctValue)
+        const newRate = feesToRate(newReference, spinzoFee, gicFee, crossRefRate)
         dispatch(rateFieldPath, newRate)
       }
 
       setLastEdited(referenceKey)
     },
-    [referenceFieldPath, pctValue, rateFieldPath, referenceKey, dispatch, setLastEdited],
+    [referenceFieldPath, spinzoFee, gicFee, crossRefRate, rateFieldPath, referenceKey, dispatch, setLastEdited],
   )
 
   const handleRateChange = useCallback(
@@ -309,38 +351,52 @@ function LinkedRateEditor({
       lastTouched.current = 'rate'
 
       dispatch(rateFieldPath, newRate)
-
-      if (referenceRate > 0) {
-        const newPct = rateToPct(referenceRate, newRate)
-        dispatch(pctFieldPath, newPct)
-      }
-
       setLastEdited(rateKey)
     },
-    [referenceRate, rateFieldPath, pctFieldPath, rateKey, dispatch, setLastEdited],
+    [rateFieldPath, rateKey, dispatch, setLastEdited],
   )
 
-  const handlePctChange = useCallback(
+  const handleSpinzoFeeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newPct = parseFloat(e.target.value)
-      if (isNaN(newPct)) return
-      lastTouched.current = 'pct'
+      const newFee = parseFloat(e.target.value)
+      if (isNaN(newFee)) return
+      lastTouched.current = 'fee'
 
-      dispatch(pctFieldPath, newPct)
+      dispatch(spinzoFeeFieldPath, newFee)
 
       if (referenceRate > 0) {
-        const newRate = pctToRate(referenceRate, newPct)
+        const newRate = feesToRate(referenceRate, newFee, gicFee, crossRefRate)
         dispatch(rateFieldPath, newRate)
       }
 
-      setLastEdited(pctKey)
+      setLastEdited(spinzoFeeFieldPath)
     },
-    [referenceRate, rateFieldPath, pctFieldPath, pctKey, dispatch, setLastEdited],
+    [referenceRate, gicFee, crossRefRate, rateFieldPath, spinzoFeeFieldPath, dispatch, setLastEdited],
+  )
+
+  const handleGicFeeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newFee = parseFloat(e.target.value)
+      if (isNaN(newFee)) return
+      lastTouched.current = 'fee'
+
+      dispatch(gicFeeFieldPath, newFee)
+
+      if (referenceRate > 0) {
+        const newRate = feesToRate(referenceRate, spinzoFee, newFee, crossRefRate)
+        dispatch(rateFieldPath, newRate)
+      }
+
+      setLastEdited(gicFeeFieldPath)
+    },
+    [referenceRate, spinzoFee, crossRefRate, rateFieldPath, gicFeeFieldPath, dispatch, setLastEdited],
   )
 
   const handleBlur = useCallback(() => {
     lastTouched.current = null
   }, [])
+
+  const totalFee = round(spinzoFee + gicFee, 6)
 
   return (
     <div style={styles.wrapper}>
@@ -388,45 +444,59 @@ function LinkedRateEditor({
       </div>
 
       <div style={styles.rowSecondary}>
-        {/* Rate input */}
+        {/* Spinzo Fee input */}
         <div style={styles.field}>
-          <label style={styles.label}>{pctLabel}</label>
+          <label style={styles.label}>Spinzo Fee</label>
           <input
             type="number"
             step="0.01"
             min="0"
-            max="100"
-            value={pctValue || ''}
-            onChange={handlePctChange}
+            value={spinzoFee || ''}
+            onChange={handleSpinzoFeeChange}
             onBlur={handleBlur}
-            placeholder="e.g. 2.5"
+            placeholder="e.g. 0.50"
             style={styles.input}
             onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--theme-elevation-400)')}
           />
           <span style={styles.hint}>
-            Set the markup percentage to control your profit margin on this rate.
+            Flat fee deducted from the reference rate.
           </span>
         </div>
 
-        <div style={styles.arrow}>
-          <ArrowIcon />
+        {/* GIC Fee input */}
+        <div style={styles.field}>
+          <label style={styles.label}>GIC Fee</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={gicFee || ''}
+            onChange={handleGicFeeChange}
+            onBlur={handleBlur}
+            placeholder="e.g. 0.50"
+            style={styles.input}
+            onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--theme-elevation-400)')}
+          />
+          <span style={styles.hint}>
+            Flat fee deducted from the reference rate.
+          </span>
         </div>
+      </div>
 
-        <div style={styles.stats}>
-          <div style={styles.statCard}>
-            <div style={styles.statLabel}>{spreadLabel}</div>
-            <div style={styles.statValue}>{spreadValue}</div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={styles.statLabel}>{spreadPctLabel}</div>
-            <div style={styles.statValue}>{spreadPctValue}%</div>
-          </div>
+      <div style={styles.stats}>
+        <div style={styles.statCard}>
+          <div style={styles.statLabel}>{spreadLabel}</div>
+          <div style={styles.statValue}>{spreadValue}</div>
+        </div>
+        <div style={styles.statCard}>
+          <div style={styles.statLabel}>{spreadPctLabel}</div>
+          <div style={styles.statValue}>{spreadPctValue}%</div>
         </div>
       </div>
 
       {referenceRate > 0 && rateValue > 0 && (
         <p style={{ ...styles.hint, marginTop: '10px' }}>
-          At {pctValue}% markup: final rate is {rateValue} (market/reference: {referenceRate}).
+          Total fee: {totalFee} (Spinzo: {spinzoFee} + GIC: {gicFee}) → final rate is {rateValue} (ref: {referenceRate}).
         </p>
       )}
     </div>
@@ -442,18 +512,17 @@ export function LinkedRateField() {
       heading="USDT → PHP Pricing"
       referenceFieldPath="usdtToPhpReferenceRate"
       rateFieldPath="usdtToPhpRate"
-      pctFieldPath="usdtToPhpMarkupPercentage"
       referenceLabel="Reference Rate (1 USDT = ? PHP)"
       rateLabel="Rate (1 USDT = ? PHP)"
-      pctLabel="Markup %"
       spreadLabel="Profit / Spread (PHP)"
       spreadPctLabel="Spread (%)"
       referenceKey="usdtToPhpReferenceRate"
       rateKey="usdtToPhpRate"
-      pctKey="usdtToPhpMarkupPercentage"
       spreadFieldPath="usdtToPhpSpread"
       spreadPctFieldPath="usdtToPhpSpreadPercentage"
       rateUnit="PHP received per USDT sold"
+      spinzoFeeFieldPath="usdtToPhpSpinzoFee"
+      gicFeeFieldPath="usdtToPhpGicFee"
     />
   )
 }
@@ -465,18 +534,18 @@ export function LinkedRateFieldPhp() {
       heading="PHP → USDT Pricing"
       referenceFieldPath="phpToUsdtReferenceRate"
       rateFieldPath="phpToUsdtRate"
-      pctFieldPath="phpToUsdtMarkupPercentage"
       referenceLabel="Reference Rate (1 PHP = ? USDT)"
       rateLabel="Rate (1 PHP = ? USDT)"
-      pctLabel="Markup %"
       spreadLabel="Profit / Spread (USDT)"
       spreadPctLabel="Spread (%)"
       referenceKey="phpToUsdtReferenceRate"
       rateKey="phpToUsdtRate"
-      pctKey="phpToUsdtMarkupPercentage"
       spreadFieldPath="phpToUsdtSpread"
       spreadPctFieldPath="phpToUsdtSpreadPercentage"
       rateUnit="USDT received per PHP spent"
+      crossReferenceFieldPath="usdtToPhpReferenceRate"
+      spinzoFeeFieldPath="phpToUsdtSpinzoFee"
+      gicFeeFieldPath="phpToUsdtGicFee"
     />
   )
 }

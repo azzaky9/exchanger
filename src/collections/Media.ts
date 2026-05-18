@@ -10,6 +10,7 @@ export const Media: CollectionConfig = {
       user?.roles?.includes('admin') ||
       user?.roles?.includes('user') ||
       user?.roles?.includes('arca') ||
+      user?.roles?.includes('gic') ||
       false,
     create: ({ req: { user } }) =>
       user?.roles?.includes('admin') || user?.roles?.includes('user') || false,

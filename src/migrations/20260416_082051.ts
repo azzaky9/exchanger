@@ -2,7 +2,12 @@ import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
-   ALTER TYPE "public"."enum_users_roles" ADD VALUE 'arca';`)
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'arca' AND enumtypid = 'public.enum_users_roles'::regtype) THEN
+        ALTER TYPE "public"."enum_users_roles" ADD VALUE 'arca';
+      END IF;
+    END $$;
+  `)
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {

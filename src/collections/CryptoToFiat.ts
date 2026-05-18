@@ -58,7 +58,8 @@ export const Sending: CollectionConfig = {
       !(
         user?.roles?.includes('user') ||
         user?.roles?.includes('admin') ||
-        user?.roles?.includes('arca')
+        user?.roles?.includes('arca') ||
+        user?.roles?.includes('gic')
       ),
   },
   access: {
@@ -80,7 +81,8 @@ export const Sending: CollectionConfig = {
           Boolean(
             user?.roles?.includes('admin') ||
             user?.roles?.includes('user') ||
-            user?.roles?.includes('arca'),
+            user?.roles?.includes('arca') ||
+            user?.roles?.includes('gic'),
           ),
         components: {
           Cell: '/components/ExchangeActionCryptoToFiatCell#ExchangeActionCryptoToFiatCell',

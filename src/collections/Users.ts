@@ -27,6 +27,7 @@ export const Users: CollectionConfig = {
         { label: 'Admin', value: 'admin' },
         { label: 'User', value: 'user' },
         { label: 'Arca', value: 'arca' },
+        { label: 'GIC', value: 'gic' },
       ],
       defaultValue: ['user'],
       required: true,

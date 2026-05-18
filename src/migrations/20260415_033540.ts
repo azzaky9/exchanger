@@ -1,23 +1,49 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+  // Add enum values only if they don't already exist (idempotent for dev-mode push)
   await db.execute(sql`
-   ALTER TYPE "public"."enum_fiat_to_crypto_status" ADD VALUE 'processing';
-  ALTER TYPE "public"."enum_fiat_to_crypto_status" ADD VALUE 'completed';
-  ALTER TYPE "public"."enum_crypto_to_fiat_status" ADD VALUE 'confirmed' BEFORE 'processing';
-  ALTER TABLE "transactions" ADD COLUMN "rate_snapshot" numeric;
-  ALTER TABLE "transactions" ADD COLUMN "reference_rate_snapshot" numeric;
-  ALTER TABLE "transactions" ADD COLUMN "applied_rate_snapshot" numeric;
-  ALTER TABLE "transactions" ADD COLUMN "usdt_to_php_reference_rate_snapshot" numeric;
-  ALTER TABLE "transactions" ADD COLUMN "usdt_to_php_rate_snapshot" numeric;
-  ALTER TABLE "transactions" ADD COLUMN "php_to_usdt_reference_rate_snapshot" numeric;
-  ALTER TABLE "transactions" ADD COLUMN "php_to_usdt_rate_snapshot" numeric;
-  ALTER TABLE "transactions" ADD COLUMN "invoice_image_id" integer;
-  ALTER TABLE "fiat_to_crypto" ADD COLUMN "invoice_image_id" integer;
-  ALTER TABLE "transactions" ADD CONSTRAINT "transactions_invoice_image_id_media_id_fk" FOREIGN KEY ("invoice_image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
-  ALTER TABLE "fiat_to_crypto" ADD CONSTRAINT "fiat_to_crypto_invoice_image_id_media_id_fk" FOREIGN KEY ("invoice_image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
-  CREATE INDEX "transactions_invoice_image_idx" ON "transactions" USING btree ("invoice_image_id");
-  CREATE INDEX "fiat_to_crypto_invoice_image_idx" ON "fiat_to_crypto" USING btree ("invoice_image_id");`)
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'processing' AND enumtypid = 'public.enum_fiat_to_crypto_status'::regtype) THEN
+        ALTER TYPE "public"."enum_fiat_to_crypto_status" ADD VALUE 'processing';
+      END IF;
+    END $$;
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'completed' AND enumtypid = 'public.enum_fiat_to_crypto_status'::regtype) THEN
+        ALTER TYPE "public"."enum_fiat_to_crypto_status" ADD VALUE 'completed';
+      END IF;
+    END $$;
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'confirmed' AND enumtypid = 'public.enum_crypto_to_fiat_status'::regtype) THEN
+        ALTER TYPE "public"."enum_crypto_to_fiat_status" ADD VALUE 'confirmed' BEFORE 'processing';
+      END IF;
+    END $$;
+  `)
+  await db.execute(sql`
+    ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "rate_snapshot" numeric;
+    ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "reference_rate_snapshot" numeric;
+    ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "applied_rate_snapshot" numeric;
+    ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "usdt_to_php_reference_rate_snapshot" numeric;
+    ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "usdt_to_php_rate_snapshot" numeric;
+    ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "php_to_usdt_reference_rate_snapshot" numeric;
+    ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "php_to_usdt_rate_snapshot" numeric;
+    ALTER TABLE "transactions" ADD COLUMN IF NOT EXISTS "invoice_image_id" integer;
+    ALTER TABLE "fiat_to_crypto" ADD COLUMN IF NOT EXISTS "invoice_image_id" integer;
+  `)
+  await db.execute(sql`
+    DO $$ BEGIN
+      ALTER TABLE "transactions" ADD CONSTRAINT "transactions_invoice_image_id_media_id_fk" FOREIGN KEY ("invoice_image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+    DO $$ BEGIN
+      ALTER TABLE "fiat_to_crypto" ADD CONSTRAINT "fiat_to_crypto_invoice_image_id_media_id_fk" FOREIGN KEY ("invoice_image_id") REFERENCES "public"."media"("id") ON DELETE set null ON UPDATE no action;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `)
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "transactions_invoice_image_idx" ON "transactions" USING btree ("invoice_image_id");
+    CREATE INDEX IF NOT EXISTS "fiat_to_crypto_invoice_image_idx" ON "fiat_to_crypto" USING btree ("invoice_image_id");
+  `)
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
