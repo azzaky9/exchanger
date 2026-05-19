@@ -143,6 +143,81 @@ async function main() {
     console.log(`  ✅ Created user "${adminEmail}" (password: password123)`)
   }
 
+  console.log("🌱 Seeding lotto user...")
+  const lottoEmail = "lotto@spinzopay.com"
+  const existingLotto = await prisma.user.findUnique({
+    where: { email: lottoEmail }
+  })
+
+  if (existingLotto) {
+    console.log(`  ⏭️  Skipping user "${lottoEmail}" — already exists`)
+  } else {
+    const bcrypt = await import("bcrypt")
+    const hashedPassword = await bcrypt.hash("admin123", 10)
+    
+    await prisma.user.create({
+      data: {
+        name: "Lotto",
+        email: lottoEmail,
+        password: hashedPassword,
+        role: "lotto",
+      }
+    })
+    console.log(`  ✅ Created user "${lottoEmail}" (password: admin123)`)
+  }
+
+  console.log("🌱 Seeding gic user...")
+  const gicEmail = "gic_user@spinzopay.com"
+  const existingGic = await prisma.user.findUnique({
+    where: { email: gicEmail }
+  })
+
+  if (existingGic) {
+    console.log(`  ⏭️  Skipping user "${gicEmail}" — already exists`)
+  } else {
+    const bcrypt = await import("bcrypt")
+    const hashedPassword = await bcrypt.hash("admin123", 10)
+    
+    await prisma.user.create({
+      data: {
+        name: "GIC",
+        email: gicEmail,
+        password: hashedPassword,
+        role: "gic",
+      }
+    })
+    console.log(`  ✅ Created user "${gicEmail}" (password: admin123)`)
+  }
+
+  console.log("🌱 Seeding default exchange rate...")
+  const existingRate = await prisma.exchange_rates.findFirst({
+    where: { is_active: true }
+  })
+
+  if (existingRate) {
+    console.log(`  ⏭️  Skipping exchange rate — an active rate already exists`)
+  } else {
+    await prisma.exchange_rates.create({
+      data: {
+        pair: "USDT/PHP",
+        usdt_to_php_rate: 57.50,
+        php_to_usdt_rate: 58.00,
+        usdt_to_php_spinzo_fee: 0.10,
+        php_to_usdt_spinzo_fee: 0.10,
+        usdt_to_php_gic_fee: 0.05,
+        php_to_usdt_gic_fee: 0.05,
+        usdt_to_php_reference_rate: 57.40,
+        usdt_to_php_spread: 0.10,
+        usdt_to_php_spread_percentage: 0.17,
+        php_to_usdt_reference_rate: 57.90,
+        php_to_usdt_spread: 0.10,
+        php_to_usdt_spread_percentage: 0.17,
+        is_active: true,
+      }
+    })
+    console.log(`  ✅ Created default exchange rate`)
+  }
+
   console.log("🌱 Seeding complete!")
 }
 

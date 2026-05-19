@@ -339,6 +339,8 @@ interface DataTableProps<TData> {
   /** Default page size (default: 10) */
   pageSize?: number
   className?: string
+  /** Pinned columns configuration */
+  pinnedColumns?: { left?: string[]; right?: string[] }
 }
 
 export function DataTable<TData>({
@@ -347,6 +349,7 @@ export function DataTable<TData>({
   emptyMessage = "No results.",
   pageSize = 10,
   className,
+  pinnedColumns = { right: ["actions"] },
 }: DataTableProps<TData>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -369,6 +372,9 @@ export function DataTable<TData>({
       rowSelection,
       columnFilters,
       pagination,
+    },
+    initialState: {
+      columnPinning: pinnedColumns,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
@@ -438,6 +444,10 @@ export function DataTable<TData>({
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort()
                   const sorted = header.column.getIsSorted()
+                  const isPinned = header.column.getIsPinned()
+                  const isLastLeftPinned = isPinned === 'left' && header.column.getIsLastColumn('left')
+                  const isFirstRightPinned = isPinned === 'right' && header.column.getIsFirstColumn('right')
+                  
                   return (
                     <TableHead
                       key={header.id}
@@ -448,7 +458,15 @@ export function DataTable<TData>({
                           ? header.column.getToggleSortingHandler()
                           : undefined
                       }
-                      style={{ cursor: canSort ? "pointer" : undefined }}
+                      style={{ 
+                        cursor: canSort ? "pointer" : undefined,
+                        left: isPinned === 'left' ? `${header.column.getStart('left')}px` : undefined,
+                        right: isPinned === 'right' ? `${header.column.getAfter('right')}px` : undefined,
+                        position: isPinned ? 'sticky' : 'relative',
+                        zIndex: isPinned ? 2 : 1,
+                        backgroundColor: isPinned ? '#1e1e1e' : undefined,
+                        boxShadow: isLastLeftPinned ? '1px 0 0 0 #282828' : isFirstRightPinned ? '-1px 0 0 0 #282828' : undefined,
+                      }}
                     >
                       {header.isPlaceholder ? null : (
                         <div className="flex select-none items-center gap-1">
@@ -487,16 +505,32 @@ export function DataTable<TData>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="border-[#1e1e1e] text-[#ededed] transition-colors hover:bg-[#1a1a1a]"
+                  className="group border-[#1e1e1e] text-[#ededed] transition-colors hover:bg-[#1a1a1a]"
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isPinned = cell.column.getIsPinned()
+                    const isLastLeftPinned = isPinned === 'left' && cell.column.getIsLastColumn('left')
+                    const isFirstRightPinned = isPinned === 'right' && cell.column.getIsFirstColumn('right')
+                    
+                    return (
+                      <TableCell 
+                        key={cell.id} 
+                        className={`py-3 ${isPinned ? "bg-background group-hover:bg-[#1a1a1a]" : ""}`}
+                        style={{
+                          left: isPinned === 'left' ? `${cell.column.getStart('left')}px` : undefined,
+                          right: isPinned === 'right' ? `${cell.column.getAfter('right')}px` : undefined,
+                          position: isPinned ? 'sticky' : 'relative',
+                          zIndex: isPinned ? 1 : 0,
+                          boxShadow: isLastLeftPinned ? '1px 0 0 0 #1e1e1e' : isFirstRightPinned ? '-1px 0 0 0 #1e1e1e' : undefined,
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             ) : (

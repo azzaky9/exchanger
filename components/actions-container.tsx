@@ -11,6 +11,12 @@ import { useCallback, useEffect, useState, useTransition } from "react"
 
 import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 // ─── Currency options ────────────────────────────────────────────────────────
 const CURRENCY_OPTIONS = ["ALL", "USDT", "PHP", "USD"] as const
@@ -92,12 +98,6 @@ export function ActionsContainer({
     pushParam(filterKey, filterActive ? null : "1")
   }
 
-  const cycleCurrency = () => {
-    const idx = currencies.indexOf(currentCurrency)
-    const next = currencies[(idx + 1) % currencies.length]
-    pushParam(currencyKey, next === "ALL" ? null : next)
-  }
-
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className={cn("flex items-center gap-3", className)}>
@@ -152,26 +152,42 @@ export function ActionsContainer({
       </button>
 
       {/* Currency selector */}
-      <button
-        id="actions-currency"
-        type="button"
-        onClick={cycleCurrency}
-        className={cn(
-          "flex shrink-0 items-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium",
-          "border-[#282828] bg-[#1e1e1e] text-[#ededed]",
-          "shadow-[inset_-2px_-2px_4px_0px_rgba(18,18,18,0.25)]",
-          "transition-colors hover:border-[#3e3e3e] hover:bg-[#242424]"
-        )}
-        aria-label={`Currency: ${currentCurrency}`}
-      >
-        <span>{currentCurrency}</span>
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
-          size={16}
-          strokeWidth={1.5}
-          className="shrink-0 text-[#ededed]"
-        />
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            id="actions-currency"
+            type="button"
+            className={cn(
+              "flex shrink-0 items-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium",
+              "border-[#282828] bg-[#1e1e1e] text-[#ededed]",
+              "shadow-[inset_-2px_-2px_4px_0px_rgba(18,18,18,0.25)]",
+              "transition-colors hover:border-[#3e3e3e] hover:bg-[#242424]"
+            )}
+            aria-label={`Currency: ${currentCurrency}`}
+          >
+            <span>{currentCurrency}</span>
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              size={16}
+              strokeWidth={1.5}
+              className="shrink-0 text-[#ededed]"
+            />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[8rem]">
+          {currencies.map((currency) => (
+            <DropdownMenuItem
+              key={currency}
+              onClick={() =>
+                pushParam(currencyKey, currency === "ALL" ? null : currency)
+              }
+              className={currentCurrency === currency ? "bg-muted" : ""}
+            >
+              {currency}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

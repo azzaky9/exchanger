@@ -10,7 +10,7 @@ const CreateNetworkSchema = z.object({
     contractAddress: z.string(),
     currencyDecimals: z.number(),
     feeToken: z.string().min(3),
-    isEnable: z.boolean(),
+    isActive: z.boolean(),
 })
 
 type TCreateNetworkSchema = z.infer<typeof CreateNetworkSchema>

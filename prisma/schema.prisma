@@ -29,6 +29,7 @@ model User {
   accounts      Account[]
   Authenticator Authenticator[]
   sessions      Session[]
+  apiKey        String?         @unique @default(uuid())
 }
 
 model Account {
@@ -129,18 +130,25 @@ model transactions {
   exchange_rate                       exchange_rates?          @relation(fields: [exchange_rate_id], references: [id], onDelete: SetNull)
 }
 
+enum enum_networks_network_category {
+  evm
+  svm
+  btc
+}
+
 model networks {
-  id                    Int                        @id @default(autoincrement())
-  name                  String                     @db.VarChar
-  symbol                String                     @db.VarChar
-  is_active             Boolean?                   @default(true)
-  updated_at            DateTime                   @default(now()) @db.Timestamptz(3)
-  created_at            DateTime                   @default(now()) @db.Timestamptz(3)
+  id                    Int                            @id @default(autoincrement())
+  name                  String                         @db.VarChar
+  symbol                String                         @db.VarChar
+  network_category      enum_networks_network_category @default(evm)
+  is_active             Boolean?                       @default(true)
+  updated_at            DateTime                       @default(now()) @db.Timestamptz(3)
+  created_at            DateTime                       @default(now()) @db.Timestamptz(3)
   network_type          enum_networks_network_type
-  usdt_contract_address String                     @db.VarChar
-  gas_fee_token_name    String                     @db.VarChar
-  rpc_url               String                     @db.VarChar
-  usdt_decimals         Decimal                    @default(6) @db.Decimal
+  usdt_contract_address String                         @db.VarChar
+  gas_fee_token_name    String                         @db.VarChar
+  rpc_url               String                         @db.VarChar
+  usdt_decimals         Decimal                        @default(6) @db.Decimal
   treasuries            treasury[]
 }
 

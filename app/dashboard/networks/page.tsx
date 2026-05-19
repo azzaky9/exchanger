@@ -50,7 +50,7 @@ export default async function Page({
                   searchKey="q"
                   filterKey="filter"
                   currencyKey="network"
-                  currencies={["ALL", "TRON", "ETHEREUM"]}
+                  currencies={["ALL", "EVM", "SVM", "BTC"]}
                 />
               </Suspense>
               <Button variant="outline" asChild>

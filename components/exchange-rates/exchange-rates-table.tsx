@@ -44,34 +44,50 @@ const columns: ColumnDef<ExchangeRate>[] = [
       <span className="text-xs">{row.getValue("currencyPair")}</span>
     ),
   },
-  // {
-  //   id: "spinzoMarkup",
-  //   header: "SPINZO MARKUP",
-  //   cell: ({ row }) => {
-  //     const usdtPhp = row.original.usdtPhpSpinzoFee
-  //     const phpUsdt = row.original.phpUsdtSpinzoFee
-  //     return (
-  //       <div className="flex flex-col gap-1 text-xs">
-  //         <span>USDT→PHP: {usdtPhp}</span>
-  //         <span>PHP→USDT: {phpUsdt}</span>
-  //       </div>
-  //     )
-  //   },
-  // },
-  // {
-  //   id: "gicMarkup",
-  //   header: "GIC MARKUP",
-  //   cell: ({ row }) => {
-  //     const usdtPhp = row.original.usdtPhpGicFee
-  //     const phpUsdt = row.original.phpUsdtGicFee
-  //     return (
-  //       <div className="flex flex-col gap-1 text-xs">
-  //         <span>USDT→PHP: {usdtPhp}</span>
-  //         <span>PHP→USDT: {phpUsdt}</span>
-  //       </div>
-  //     )
-  //   },
-  // },
+  {
+    accessorKey: "active",
+    header: "ACTIVE",
+    cell: ({ row }) => {
+      const active = row.getValue("active") as boolean
+      return (
+        <span
+          className={`text-xs font-medium ${
+            active ? "text-[#83b047]" : "text-[#4e4e4e]"
+          }`}
+        >
+          {active ? "Active" : "Inactive"}
+        </span>
+      )
+    },
+  },
+  {
+    id: "spinzoMarkup",
+    header: "SPINZO MARKUP",
+    cell: ({ row }) => {
+      const usdtPhp = row.original.usdtPhpSpinzoFee
+      const phpUsdt = row.original.phpUsdtSpinzoFee
+      return (
+        <div className="flex flex-col gap-1 text-xs">
+          <span>USDT→PHP: {usdtPhp}</span>
+          <span>PHP→USDT: {phpUsdt}</span>
+        </div>
+      )
+    },
+  },
+  {
+    id: "gicMarkup",
+    header: "GIC MARKUP",
+    cell: ({ row }) => {
+      const usdtPhp = row.original.usdtPhpGicFee
+      const phpUsdt = row.original.phpUsdtGicFee
+      return (
+        <div className="flex flex-col gap-1 text-xs">
+          <span>USDT→PHP: {usdtPhp}</span>
+          <span>PHP→USDT: {phpUsdt}</span>
+        </div>
+      )
+    },
+  },
   {
     accessorKey: "usdtPhpRefRate",
     header: "USDT → PHP REFERENCE RATE",
@@ -117,22 +133,6 @@ const columns: ColumnDef<ExchangeRate>[] = [
         {row.getValue("phpUsdtProfitSpread") + " " + "USDT/USD"}
       </span>
     ),
-  },
-  {
-    accessorKey: "active",
-    header: "ACTIVE",
-    cell: ({ row }) => {
-      const active = row.getValue("active") as boolean
-      return (
-        <span
-          className={`text-xs font-medium ${
-            active ? "text-[#83b047]" : "text-[#4e4e4e]"
-          }`}
-        >
-          {active ? "Active" : "Inactive"}
-        </span>
-      )
-    },
   },
 
   {
@@ -191,6 +191,8 @@ function ExchangeRateActions({ row }: { row: any }) {
 export function ExchangeRatesTable({
   data: initialData,
 }: ExchangeRatesTableProps) {
+  console.log({ initialData }, "initial data")
+
   const searchParams = useSearchParams()
   const q = searchParams.get("q") || ""
   const filter = searchParams.get("filter") || ""
@@ -221,6 +223,7 @@ export function ExchangeRatesTable({
         isLoading ? "Loading exchange rates..." : "No exchange rates found"
       }
       pageSize={10}
+      pinnedColumns={{ right: ["actions"] }}
     />
   )
 }

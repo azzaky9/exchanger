@@ -14,7 +14,7 @@ export async function createNetwork(payload: TCreateNetworkSchema) {
                 symbol: payload.symbol,
                 usdt_contract_address: payload.contractAddress,
                 usdt_decimals: payload.currencyDecimals,
-                is_active: payload.isEnable
+                is_active: payload.isActive
             }
         })
 

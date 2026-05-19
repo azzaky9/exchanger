@@ -5,6 +5,8 @@ import { networkIcons } from "@web3icons/react"
 
 import { DataTable } from "@/components/data-table"
 import { Switch } from "@/components/ui/switch"
+import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 export interface Network {
   id: string
@@ -110,14 +112,7 @@ const columns: ColumnDef<Network>[] = [
   {
     accessorKey: "isActive",
     header: "IS ACTIVE",
-    cell: ({ row }) => {
-      const active = row.getValue("isActive") as boolean
-      return (
-        <div className="flex items-center">
-          <Switch checked={active} />
-        </div>
-      )
-    },
+    cell: ({ row }) => <NetworkActiveSwitch network={row.original} />,
   },
   {
     accessorKey: "createdAt",
@@ -147,5 +142,40 @@ export function NetworksTable({ data }: NetworksTableProps) {
       emptyMessage="No networks configured"
       pageSize={10}
     />
+  )
+}
+
+function NetworkActiveSwitch({ network }: { network: Network }) {
+  const queryClient = useQueryClient()
+
+  const toggleStatus = async (checked: boolean) => {
+    const promise = fetch(`/api/networks/${network.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ isActive: checked }),
+    }).then(async (res) => {
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to update network status")
+      }
+      return data
+    })
+
+    toast.promise(promise, {
+      loading: "Updating network status...",
+      success: () => {
+        queryClient.invalidateQueries({ queryKey: ["networks"] })
+        return `Network ${network.networkName} is now ${checked ? "active" : "inactive"}`
+      },
+      error: (err) => err.message || "An error occurred",
+    })
+  }
+
+  return (
+    <div className="flex items-center">
+      <Switch checked={network.isActive} onCheckedChange={toggleStatus} />
+    </div>
   )
 }

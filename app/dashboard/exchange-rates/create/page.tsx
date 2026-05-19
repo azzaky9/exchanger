@@ -172,7 +172,7 @@ export default function CreateExchangeRatePage() {
     let rate = 0
     let diff = 0
     if (ref > 0) {
-      const usdtToPhpRef = 1 / ref
+      const usdtToPhpRef = getValues("usdtToPhpReferenceRate") || (1 / ref)
       const spinzoRate = spinzo / (usdtToPhpRef * usdtToPhpRef)
       const gicRate = gic / (usdtToPhpRef * usdtToPhpRef)
       rate = roundToSixDecimals(ref - spinzoRate - gicRate)
@@ -198,7 +198,7 @@ export default function CreateExchangeRatePage() {
     const diff = Math.abs(ref - rate)
     let spinzo = 0
     if (ref > 0) {
-      const usdtToPhpRef = 1 / ref
+      const usdtToPhpRef = getValues("usdtToPhpReferenceRate") || (1 / ref)
       const totalFee = diff * (usdtToPhpRef * usdtToPhpRef)
       spinzo = totalFee - currentGic
     }

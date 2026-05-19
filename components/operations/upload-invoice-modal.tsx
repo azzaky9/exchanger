@@ -51,14 +51,24 @@ interface UploadInvoiceModalProps {
   onUpload?: (files: File[]) => Promise<void> | void
   /** Transaction ID for contextual display. */
   transactionId?: string
+  /** Controlled open state (optional). */
+  open?: boolean
+  /** Controlled open change handler (optional). */
+  onOpenChange?: (open: boolean) => void
 }
 
 export function UploadInvoiceModal({
   children,
   onUpload,
   transactionId,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: UploadInvoiceModalProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen
+
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -75,7 +85,7 @@ export function UploadInvoiceModal({
       setOpen(nextOpen)
       if (!nextOpen) resetState()
     },
-    [resetState]
+    [setOpen, resetState]
   )
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
@@ -147,18 +157,67 @@ export function UploadInvoiceModal({
       return
     }
 
+    if (!transactionId) {
+      toast.error("Transaction ID is missing.")
+      return
+    }
+
     setIsSubmitting(true)
-    try {
-      await onUpload?.(files.map((f) => f.file))
+
+    let allSuccess = true
+
+    for (let i = 0; i < files.length; i++) {
+      // Mark file as uploading
+      setFiles((prev) =>
+        prev.map((f, idx) => (idx === i ? { ...f, status: "uploading" as const } : f))
+      )
+
+      try {
+        const formData = new FormData()
+        formData.append("transactionId", transactionId)
+        formData.append("file", files[i].file)
+
+        const res = await fetch("/api/transactions/proof/upload-invoice", {
+          method: "POST",
+          body: formData,
+        })
+
+        const json = await res.json()
+
+        if (!res.ok || !json.success) {
+          throw new Error(json.message || "Upload failed")
+        }
+
+        // Mark file as done
+        setFiles((prev) =>
+          prev.map((f, idx) => (idx === i ? { ...f, status: "done" as const } : f))
+        )
+      } catch (err: any) {
+        allSuccess = false
+        // Mark file as error
+        setFiles((prev) =>
+          prev.map((f, idx) => (idx === i ? { ...f, status: "error" as const } : f))
+        )
+        toast.error(`Failed to upload "${files[i].file.name}": ${err.message}`)
+      }
+    }
+
+    if (allSuccess) {
+      // Also call optional callback if provided
+      try {
+        await onUpload?.(files.map((f) => f.file))
+      } catch {
+        // Optional callback failed, but uploads succeeded
+      }
       toast.success("Invoice uploaded successfully.")
       setOpen(false)
       resetState()
-    } catch {
-      toast.error("Failed to upload invoice. Please try again.")
-    } finally {
-      setIsSubmitting(false)
+    } else {
+      toast.error("Some files failed to upload. Please retry.")
     }
-  }, [files, onUpload, resetState])
+
+    setIsSubmitting(false)
+  }, [files, transactionId, onUpload, resetState])
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -218,7 +277,7 @@ export function UploadInvoiceModal({
             ref={inputRef}
             type="file"
             className="hidden"
-            accept=".jpeg,.jpg,.png,.pdf,.doc,.docx"
+            accept=".jpeg,.jpg,.png,.pdf,.doc,.docx,.webp"
             multiple
             onChange={handleFileInput}
             id="upload-invoice-file-input"

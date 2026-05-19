@@ -34,7 +34,30 @@ export async function getTransactions(params?: {
     orderBy: {
       created_at: "desc",
     },
+    include: {
+      exchange_rate: true,
+    }
   })
 
-  return transactions
+  // Since there is no explicit relation to treasury in the schema, let's fetch treasuries manually
+  const treasuryIds = [...new Set(transactions.map(t => t.treasury_id).filter(Boolean))]
+  const treasuries = await prisma.treasury.findMany({
+    where: {
+      id: { in: treasuryIds }
+    }
+  })
+  const treasuryMap = new Map(treasuries.map(t => [t.id, t]))
+
+  // Fetch media records for invoice images
+  const mediaIds = [...new Set(transactions.map(t => t.invoice_image_id).filter((id): id is number => id !== null))]
+  const mediaRecords = mediaIds.length > 0
+    ? await prisma.media.findMany({ where: { id: { in: mediaIds } } })
+    : []
+  const mediaMap = new Map(mediaRecords.map(m => [m.id, m]))
+
+  return transactions.map(t => ({
+    ...t,
+    treasury: treasuryMap.get(t.treasury_id) || null,
+    invoiceMedia: t.invoice_image_id ? mediaMap.get(t.invoice_image_id) || null : null,
+  }))
 }

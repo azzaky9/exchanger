@@ -3,6 +3,7 @@ import { TUpdateNetworkSchema } from "./dto-network"
 import { enum_networks_network_type } from "@/generated/prisma"
 
 export async function updateNetwork(id: number, payload: TUpdateNetworkSchema) {
+
     const network = await prisma.networks.update({
         where: {
             id,
@@ -15,9 +16,11 @@ export async function updateNetwork(id: number, payload: TUpdateNetworkSchema) {
             symbol: payload.symbol,
             usdt_contract_address: payload.contractAddress,
             usdt_decimals: payload.currencyDecimals,
-            is_active: payload.isEnable,
+            is_active: payload.isActive,
         },
     })
+
+
 
     return network
 }

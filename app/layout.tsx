@@ -1,10 +1,12 @@
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryProvider } from "@/components/providers/query-provider"
+import { ProgressBarProvider } from "@/components/providers/progress-bar-provider"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 import { SessionProvider } from "next-auth/react"
 import { Manrope } from "next/font/google"
+import { Toaster } from "@/components/ui/sonner"
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -33,9 +35,12 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <TooltipProvider>
-              <SessionProvider refetchOnWindowFocus>{children}</SessionProvider>
+              <SessionProvider refetchOnWindowFocus>
+                <ProgressBarProvider>{children}</ProgressBarProvider>
+              </SessionProvider>
             </TooltipProvider>
           </ThemeProvider>
+          <Toaster position="top-center" />
         </QueryProvider>
       </body>
     </html>

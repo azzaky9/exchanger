@@ -28,15 +28,20 @@ export default async function EditExchangeRatePage({
     usdtToPhpSpread: rate.usdt_to_php_spread?.toString() || "0",
     usdtToPhpSpreadPercentage:
       rate.usdt_to_php_spread_percentage?.toString() || "0",
-
     phpToUsdtReferenceRate: rate.php_to_usdt_reference_rate.toString(),
     phpToUsdtRate: rate.php_to_usdt_rate.toString(),
     phpToUsdtSpread: rate.php_to_usdt_spread?.toString() || "0",
     phpToUsdtSpreadPercentage:
       rate.php_to_usdt_spread_percentage?.toString() || "0",
+    phpToUsdtSpinzoFee: rate.php_to_usdt_spinzo_fee?.toString() || "0",
+    phpToUsdtGicFee: rate.php_to_usdt_gic_fee?.toString() || "0",
+    usdtToPhpSpinzoFee: rate.usdt_to_php_spinzo_fee?.toString() || "0",
+    usdtToPhpGicFee: rate.usdt_to_php_gic_fee?.toString() || "0",
 
     isActive: rate.is_active || false,
   }
+
+  console.log({ serializedRate })
 
   return (
     <div className="flex flex-1 flex-col p-8 text-[#ededed]">
