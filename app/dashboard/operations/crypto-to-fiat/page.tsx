@@ -47,7 +47,7 @@ export default async function Page(props: {
       ? `1 USDT = ${appliedRate} PHP`
       : "-"
 
-    const amountSentToExchange = `${(t.amount_php.toNumber() / Number(t.exchange_rate?.php_to_usdt_rate ?? 0)).toFixed(6)} USDT`
+    const amountSentToExchange = `${(t.amount_php.toNumber() / Number(t.exchange_rate?.usdt_to_php_rate ?? 0)).toFixed(6)} USDT`
 
     return {
       ...base,
