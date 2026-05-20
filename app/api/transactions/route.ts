@@ -41,9 +41,7 @@ export const GET = withErrorHandler(async (req) => {
                 : `1 USDT = ${appliedRate} PHP`)
             : "-"
 
-        const amountUsdt = Number(t.amount_usdt || 0)
-        const profitUsdt = Number(t.profit || 0)
-        const amountSentToExchange = `${(amountUsdt + profitUsdt).toFixed(6)} USDT`
+        const amountSentToExchange = `${(t.amount_php.toNumber() * Number(t.exchange_rate?.php_to_usdt_rate ?? 0)).toFixed(6)} USDT`
 
         return {
             ...base,

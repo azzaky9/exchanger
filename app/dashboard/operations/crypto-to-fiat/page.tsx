@@ -4,8 +4,8 @@ import { Suspense } from "react"
 
 import { ActionsContainer } from "@/components/actions-container"
 import {
-    OfframpTable,
-    type OfframpTransaction,
+  OfframpTable,
+  type OfframpTransaction,
 } from "@/components/operations/offramp-table"
 import { OperationStatsCard } from "@/components/operations/stats-ops-card"
 import { getTransactions } from "@/services/transactions/get-transactions"
@@ -47,9 +47,7 @@ export default async function Page(props: {
       ? `1 USDT = ${appliedRate} PHP`
       : "-"
 
-    const amountUsdt = Number(t.amount_usdt || 0)
-    const profitUsdt = Number(t.profit || 0)
-    const amountSentToExchange = `${(amountUsdt + profitUsdt).toFixed(6)} USDT`
+    const amountSentToExchange = `${(t.amount_php.toNumber() * Number(t.exchange_rate?.php_to_usdt_rate ?? 0)).toFixed(6)} USDT`
 
     return {
       ...base,

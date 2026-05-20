@@ -11,8 +11,8 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { editExchangeRateAction, getLiveReferenceRatesAction } from "../../actions"
-import { useTransition, useEffect } from "react"
+import { editExchangeRateAction } from "../../actions"
+import { useTransition } from "react"
 
 const roundToSixDecimals = (value: number) =>
   Math.round(value * 1000000) / 1000000
@@ -187,41 +187,6 @@ export function EditExchangeRateForm({ rate }: { rate: any }) {
     )
   }
 
-  // Fetch live reference rates on mount
-  useEffect(() => {
-    const fetchRates = async () => {
-      const res = await getLiveReferenceRatesAction()
-      if (res.success && res.data) {
-        setValue("usdtToPhpReferenceRate", res.data.usdtToPhpReferenceRate, {
-          shouldValidate: true,
-        })
-        setValue("phpToUsdtReferenceRate", res.data.phpToUsdtReferenceRate, {
-          shouldValidate: true,
-        })
-
-        // Also update the dependent fields (rates, spread) based on current fees
-        const currentUsdtToPhpSpinzo = getValues("usdtToPhpSpinzoFee") || 0
-        const currentUsdtToPhpGic = getValues("usdtToPhpGicFee") || 0
-        updateUsdtToPhpFromFees(
-          res.data.usdtToPhpReferenceRate,
-          currentUsdtToPhpSpinzo,
-          currentUsdtToPhpGic
-        )
-
-        const currentPhpToUsdtSpinzo = getValues("phpToUsdtSpinzoFee") || 0
-        const currentPhpToUsdtGic = getValues("phpToUsdtGicFee") || 0
-        updatePhpToUsdtFromFees(
-          res.data.phpToUsdtReferenceRate,
-          currentPhpToUsdtSpinzo,
-          currentPhpToUsdtGic
-        )
-      } else {
-        toast.error("Failed to fetch live reference rates")
-      }
-    }
-    fetchRates()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const onSubmit = (data: FormData) => {
     startTransition(async () => {

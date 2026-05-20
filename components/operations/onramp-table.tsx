@@ -26,6 +26,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 
 import { BankDetailsModal } from "@/components/operations/bank-details-modal"
 import { getExplorerName, getExplorerTxUrl } from "@/lib/explorer"
+import { useSession } from "next-auth/react"
 import { DataTable } from "../data-table"
 import { UploadTxHashModal } from "./input-txhash-modal"
 
@@ -343,7 +344,8 @@ function OnrampActionCell({ row }: { row: any }) {
   // We need the role here. Ideally passed through row.options.meta, but we can also just fetch session or pass it.
   // Actually, wait, React Table cell can access `table.options.meta?.role`.
   // Let's use `row.original` status and let `OnrampTable` handle passing role via meta or we can just access it.
-  const role = (row as any).table?.options?.meta?.role || "admin";
+  const session = useSession()
+  const role = session.data?.user ? (session.data.user as any).role : null
 
   const [loading, setLoading] = React.useState<string | null>(null)
   const [uploadOpen, setUploadOpen] = React.useState(false)
@@ -383,33 +385,6 @@ function OnrampActionCell({ row }: { row: any }) {
     return <span className="text-xs text-[#83b047]">✓ Done</span>
   }
 
-  // Lotto: only upload invoice action, no dropdown needed
-  if (role === "lotto") {
-    if (isInvoiceUploaded) {
-      return <span className="text-xs text-[#4e4e4e]">Invoice Submitted</span>
-    }
-    return (
-      <>
-        <Button
-          variant="outline"
-          size="xs"
-          onClick={() => setUploadOpen(true)}
-          disabled={loading !== null}
-        >
-          <HugeiconsIcon icon={CloudUploadIcon} className="mr-1.5 h-3 w-3" />
-          Upload Invoice
-        </Button>
-        <UploadInvoiceModal
-          transactionId={row.original.id}
-          orderId={row.original.orderId}
-          open={uploadOpen}
-          onOpenChange={setUploadOpen}
-        >
-          <span />
-        </UploadInvoiceModal>
-      </>
-    )
-  }
 
   const canConfirmArrival =
     status !== "fiat_arrival" &&
@@ -442,10 +417,31 @@ function OnrampActionCell({ row }: { row: any }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[200px]">
-          <DropdownMenuItem onClick={() => setTxHashOpen(true)}>
-            <HugeiconsIcon icon={CloudUploadIcon} className="mr-2 h-4 w-4" />
-            Upload Tx Hash
-          </DropdownMenuItem>
+          {role === "lotto" ? (
+            <>
+              <DropdownMenuItem
+                onClick={() => setUploadOpen(true)}
+                disabled={loading !== null || isInvoiceUploaded}
+              >
+                <HugeiconsIcon icon={CloudUploadIcon} className="mr-1.5 h-3 w-3" />
+                Upload Invoice
+              </DropdownMenuItem>
+              <UploadInvoiceModal
+                transactionId={row.original.id}
+                orderId={row.original.orderId}
+                open={uploadOpen}
+                onOpenChange={setUploadOpen}
+              >
+                <span />
+              </UploadInvoiceModal>
+            </>
+          ) : (
+            <DropdownMenuItem onClick={() => setTxHashOpen(true)}>
+              <HugeiconsIcon icon={CloudUploadIcon} className="mr-2 h-4 w-4" />
+              Upload Tx Hash
+            </DropdownMenuItem>
+          )}
+
           {canConfirmArrival && (
             <DropdownMenuItem onClick={() => updateStatus("fiat_arrival")}>
               <HugeiconsIcon
