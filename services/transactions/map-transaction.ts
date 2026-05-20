@@ -39,6 +39,13 @@ export function mapTransaction(t: any, role: string) {
     if (t.exchange_rate) {
         if (isFiatToCrypto) {
             const refRate = Number(t.reference_rate_snapshot || t.exchange_rate.php_to_usdt_reference_rate || 0);
+            const appliedRate = Number(
+                t.applied_rate_snapshot ||
+                t.rate_snapshot ||
+                t.php_to_usdt_rate_snapshot ||
+                t.exchange_rate.php_to_usdt_rate ||
+                0
+            );
             if (role === "gic") {
                 const spinzoFee = Number(t.exchange_rate.php_to_usdt_spinzo_fee || 0);
                 const usdtToPhpRef = Number(
@@ -49,15 +56,28 @@ export function mapTransaction(t: any, role: string) {
                 const spinzoRate = spinzoFee / (usdtToPhpRef * usdtToPhpRef);
                 const defaultRate = refRate - spinzoRate;
                 displayRate = `1 PHP = ${defaultRate.toFixed(6)} USDT`;
+            } else if (role === "lotto") {
+                const rate = appliedRate || refRate;
+                displayRate = `1 PHP = ${rate.toFixed(6)} USDT`;
             } else {
                 displayRate = `1 PHP = ${refRate.toFixed(6)} USDT`;
             }
         } else {
             const refRate = Number(t.reference_rate_snapshot || t.exchange_rate.usdt_to_php_reference_rate || 0);
+            const appliedRate = Number(
+                t.applied_rate_snapshot ||
+                t.rate_snapshot ||
+                t.usdt_to_php_rate_snapshot ||
+                t.exchange_rate.usdt_to_php_rate ||
+                0
+            );
             if (role === "gic") {
                 const spinzoFee = Number(t.exchange_rate.usdt_to_php_spinzo_fee || 0);
                 const defaultRate = refRate - spinzoFee;
                 displayRate = `1 USDT = ${defaultRate.toFixed(2)} PHP`;
+            } else if (role === "lotto") {
+                const rate = appliedRate || refRate;
+                displayRate = `1 USDT = ${rate.toFixed(2)} PHP`;
             } else {
                 displayRate = `1 USDT = ${refRate.toFixed(2)} PHP`;
             }

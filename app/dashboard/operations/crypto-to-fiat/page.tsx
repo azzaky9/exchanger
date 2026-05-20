@@ -35,6 +35,8 @@ export default async function Page(props: {
 
   const safeRole = role || "admin"
 
+
+
   const mappedData: OfframpTransaction[] = dbTransactions.map((t) => {
     const base = mapTransaction(t, safeRole) as OfframpTransaction
     const appliedRateFromSnapshot = Number(
@@ -46,12 +48,14 @@ export default async function Page(props: {
     )
     const spinzoFee = Number(t.exchange_rate?.usdt_to_php_spinzo_fee) || 0
     const gicFee = Number(t.exchange_rate?.usdt_to_php_gic_fee) || 0
-    const markupRate = referenceRate > 0
-      ? referenceRate - spinzoFee - gicFee
-      : (appliedRateFromSnapshot || appliedRateFromRateSnapshot || 0)
+    const fallbackAppliedRate = Number(t.exchange_rate?.usdt_to_php_rate) || 0
+    const markupRate = appliedRateFromSnapshot || appliedRateFromRateSnapshot || fallbackAppliedRate ||
+      (referenceRate > 0 ? referenceRate - spinzoFee - gicFee : 0)
     const markupExchangeRate = markupRate > 0
       ? `1 USDT = ${markupRate} PHP`
       : "-"
+
+
 
     const amountPhp = typeof t.amount_php?.toNumber === "function"
       ? t.amount_php.toNumber()
@@ -74,6 +78,8 @@ export default async function Page(props: {
         ? parseFloat(mappedData[index].gicProfit) || 0
         : Number(t.profit || 0),
   }))
+
+
 
   const totalTransactions = txData.length
   const totalPending = txData.filter(
@@ -143,6 +149,8 @@ export default async function Page(props: {
     (acc, t) => acc + Number(t.amount_php || 0),
     0
   )
+
+  console.log("MAPPING: ", { mappedData })
 
   const stats = {
     totalTransactions,

@@ -178,13 +178,12 @@ const baseColumns: ColumnDef<OfframpTransaction>[] = [
     accessorKey: "exchangeRate",
     header: "REFERENCE RATE",
     cell: ({ row }) => {
-      const role = (row as any).table?.options?.meta?.role
 
-      console.log("ROW META role", (row as any).table?.options?.meta)
+      console.log("ROW DATA", row.original)
+      const role = (row as any).table?.options?.meta?.role
       const value = role === "lotto"
-        ? row.getValue("markupExchangeRate")
+        ? row.original.markupExchangeRate
         : row.getValue("exchangeRate")
-      console.log("EXCHANGE RATE CELL", { rate: value })
       return <span className="text-xs">{value as string}</span>
     },
   },
@@ -467,6 +466,8 @@ interface OfframpTableProps {
 }
 
 export function OfframpTable({ data: initialData = [], role }: OfframpTableProps) {
+  const session = useSession()
+  const resolvedRole = role || (session.data?.user ? (session.data.user as any).role : undefined)
   const searchParams = useSearchParams()
   const q = searchParams.get("q") || ""
   const filter = searchParams.get("filter") || ""
@@ -488,7 +489,7 @@ export function OfframpTable({ data: initialData = [], role }: OfframpTableProps
     initialData: initialData.length > 0 ? initialData : undefined,
   })
 
-  const columns = React.useMemo(() => getColumns(role), [role])
+  const columns = React.useMemo(() => getColumns(resolvedRole), [resolvedRole])
 
   return (
     <DataTable
@@ -498,7 +499,7 @@ export function OfframpTable({ data: initialData = [], role }: OfframpTableProps
         isLoading ? "Loading transactions..." : "No transactions in this period"
       }
       pageSize={10}
-      meta={{ role }}
+      meta={{ role: resolvedRole }}
     />
   )
 }
