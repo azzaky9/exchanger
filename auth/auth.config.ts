@@ -17,6 +17,7 @@ export const authConfig = {
                 '/api/transactions/upload-invoice',
                 '/api/transactions/upload-tx',
                 '/api/transactions/create-exchange',
+                '/api/networks/available',
                 '/api/exchange-rates/current',
                 '/api/exchange-rates/reference-rate'
             ].some(route => nextUrl.pathname.startsWith(route));
