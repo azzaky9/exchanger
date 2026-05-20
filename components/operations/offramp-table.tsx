@@ -33,12 +33,12 @@ export interface OfframpTransaction {
   orderId: string
   type: string
   status:
-    | "pending"
-    | "confirmed"
-    | "processing"
-    | "complete"
-    | "fiat_arrival"
-    | "crypto_arrival"
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "complete"
+  | "fiat_arrival"
+  | "crypto_arrival"
   totalAmountSent: string
   totalReceived: string
   profitUsdt: string
@@ -357,6 +357,7 @@ function OfframpActionCell({ row }: { row: any }) {
           Upload Tx Hash
         </Button>
         <UploadTxHashModal
+          orderId={row.original.orderId}
           open={txHashOpen}
           onOpenChange={setTxHashOpen}
           transactionId={transactionId}

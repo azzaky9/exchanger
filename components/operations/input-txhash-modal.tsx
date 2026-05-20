@@ -1,8 +1,8 @@
 "use client"
 
+import { useQueryClient } from "@tanstack/react-query"
 import * as React from "react"
 import { toast } from "sonner"
-import { useQueryClient } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,12 +19,14 @@ import { Label } from "@/components/ui/label"
 
 interface UploadTxHashModalProps {
   open: boolean
+  orderId: string;
   onOpenChange: (open: boolean) => void
   transactionId: number
 }
 
 export function UploadTxHashModal({
   open,
+  orderId,
   onOpenChange,
   transactionId,
 }: UploadTxHashModalProps) {
@@ -42,7 +44,7 @@ export function UploadTxHashModal({
 
     setLoading(true)
     try {
-      const res = await fetch("/api/transactions/proof/upload-tx", {
+      const res = await fetch(`/api/transactions/upload-tx/${orderId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transactionId, txHash: txHash.trim() }),

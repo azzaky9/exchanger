@@ -34,12 +34,12 @@ export interface OnrampTransaction {
   orderId: string
   type: string
   status:
-    | "pending"
-    | "confirmed"
-    | "processing"
-    | "complete"
-    | "fiat_arrival"
-    | "crypto_arrival"
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "complete"
+  | "fiat_arrival"
+  | "crypto_arrival"
   totalAmountSent: string
   totalReceived: string
   profitUsdt: string
@@ -463,6 +463,7 @@ function OnrampActionCell({ row }: { row: any }) {
       </DropdownMenu>
 
       <UploadTxHashModal
+        orderId={row.original.orderId}
         open={txHashOpen}
         onOpenChange={setTxHashOpen}
         transactionId={transactionId}
