@@ -29,26 +29,45 @@ export const GET = withErrorHandler(async (req) => {
     const mappedData = dbTransactions.map(t => {
         const base = mapTransaction(t, role)
         const isFiatToCrypto = t.type === "fiat_to_crypto"
-        const appliedRate = Number(
-            t.applied_rate_snapshot ||
-            t.rate_snapshot ||
-            (isFiatToCrypto ? t.exchange_rate?.php_to_usdt_rate : t.exchange_rate?.usdt_to_php_rate) ||
+        const appliedRateFromSnapshot = Number(
+            t.applied_rate_snapshot || t.rate_snapshot || 0
+        )
+        const appliedRateFromRateSnapshot = Number(
+            isFiatToCrypto
+                ? t.php_to_usdt_rate_snapshot || 0
+                : t.usdt_to_php_rate_snapshot || 0
+        )
+        const refRate = Number(
+            t.reference_rate_snapshot ||
+            (isFiatToCrypto
+                ? t.exchange_rate?.php_to_usdt_reference_rate
+                : t.exchange_rate?.usdt_to_php_reference_rate) ||
             0
         )
-        const markupExchangeRate = appliedRate
+        const spinzoFee = Number(
+            isFiatToCrypto
+                ? t.exchange_rate?.php_to_usdt_spinzo_fee
+                : t.exchange_rate?.usdt_to_php_spinzo_fee
+        ) || 0
+        const gicFee = Number(
+            isFiatToCrypto
+                ? t.exchange_rate?.php_to_usdt_gic_fee
+                : t.exchange_rate?.usdt_to_php_gic_fee
+        ) || 0
+        const markupRate = refRate > 0
+            ? refRate - spinzoFee - gicFee
+            : (appliedRateFromSnapshot || appliedRateFromRateSnapshot || 0)
+        const markupExchangeRate = markupRate > 0
             ? (isFiatToCrypto
-                ? `1 PHP = ${appliedRate} USDT`
-                : `1 USDT = ${appliedRate} PHP`)
+                ? `1 PHP = ${markupRate} USDT`
+                : `1 USDT = ${markupRate} PHP`)
             : "-"
 
         const amountPhp = typeof t.amount_php?.toNumber === "function"
             ? t.amount_php.toNumber()
             : Number(t.amount_php || 0)
-        const referenceRate = Number(
-            t.reference_rate_snapshot || t.exchange_rate?.usdt_to_php_reference_rate || 0
-        )
-        const amountSentToExchange = referenceRate > 0
-            ? `${(amountPhp / referenceRate).toFixed(6)} USDT`
+        const amountSentToExchange = refRate > 0
+            ? `${(amountPhp / refRate).toFixed(6)} USDT`
             : "-"
 
         return {

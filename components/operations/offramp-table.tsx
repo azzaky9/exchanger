@@ -177,9 +177,16 @@ const baseColumns: ColumnDef<OfframpTransaction>[] = [
   {
     accessorKey: "exchangeRate",
     header: "REFERENCE RATE",
-    cell: ({ row }) => (
-      <span className="text-xs">{row.getValue("exchangeRate")}</span>
-    ),
+    cell: ({ row }) => {
+      const role = (row as any).table?.options?.meta?.role
+
+      console.log("ROW META role", (row as any).table?.options?.meta)
+      const value = role === "lotto"
+        ? row.getValue("markupExchangeRate")
+        : row.getValue("exchangeRate")
+      console.log("EXCHANGE RATE CELL", { rate: value })
+      return <span className="text-xs">{value}</span>
+    },
   },
   {
     accessorKey: "profitUsdt",
@@ -304,7 +311,10 @@ function getColumns(role?: string): ColumnDef<OfframpTransaction>[] {
       "profitUsdt",
       "profitPercentage",
       "spinzoProfit",
-      "transactionProfitSpread"
+      "transactionProfitSpread",
+      ...(role === "lotto"
+        ? ["markupExchangeRate", "amountSentToExchange", "gicProfit"]
+        : [])
     ];
     return baseColumns
       .map(c => ((c as any).accessorKey === "status" ? statusColumn : c))

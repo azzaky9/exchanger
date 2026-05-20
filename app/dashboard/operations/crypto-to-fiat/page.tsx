@@ -37,22 +37,25 @@ export default async function Page(props: {
 
   const mappedData: OfframpTransaction[] = dbTransactions.map((t) => {
     const base = mapTransaction(t, safeRole) as OfframpTransaction
-    const appliedRate = Number(
-      t.applied_rate_snapshot ||
-      t.rate_snapshot ||
-      t.exchange_rate?.usdt_to_php_rate ||
-      0
+    const appliedRateFromSnapshot = Number(
+      t.applied_rate_snapshot || t.rate_snapshot || 0
     )
-    const markupExchangeRate = appliedRate
-      ? `1 USDT = ${appliedRate} PHP`
+    const appliedRateFromRateSnapshot = Number(t.usdt_to_php_rate_snapshot || 0)
+    const referenceRate = Number(
+      t.reference_rate_snapshot || t.exchange_rate?.usdt_to_php_reference_rate || 0
+    )
+    const spinzoFee = Number(t.exchange_rate?.usdt_to_php_spinzo_fee) || 0
+    const gicFee = Number(t.exchange_rate?.usdt_to_php_gic_fee) || 0
+    const markupRate = referenceRate > 0
+      ? referenceRate - spinzoFee - gicFee
+      : (appliedRateFromSnapshot || appliedRateFromRateSnapshot || 0)
+    const markupExchangeRate = markupRate > 0
+      ? `1 USDT = ${markupRate} PHP`
       : "-"
 
     const amountPhp = typeof t.amount_php?.toNumber === "function"
       ? t.amount_php.toNumber()
       : Number(t.amount_php || 0)
-    const referenceRate = Number(
-      t.reference_rate_snapshot || t.exchange_rate?.usdt_to_php_reference_rate || 0
-    )
     const amountSentToExchange = referenceRate > 0
       ? `${(amountPhp / referenceRate).toFixed(6)} USDT`
       : "-"

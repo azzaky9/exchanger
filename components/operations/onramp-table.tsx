@@ -327,7 +327,8 @@ function getColumns(role?: string): ColumnDef<OnrampTransaction>[] {
       "profitUsdt",
       "profitPercentage",
       "spinzoProfit",
-      "transactionProfitSpread"
+      "transactionProfitSpread",
+      ...(role === "lotto" ? ["gicProfit", "markupExchangeRate"] : [])
     ];
     return baseColumns
       .map(c => ((c as any).accessorKey === "status" ? statusColumn : c))
