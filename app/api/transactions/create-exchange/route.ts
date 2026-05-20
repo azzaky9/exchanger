@@ -1,7 +1,8 @@
-import { withErrorHandler, unauthorized, successResponse } from "@/lib/api-response"
-import { z } from "zod"
-import { createExchangeTransaction } from "@/services/transactions/create-exchange"
 import { auth } from "@/auth/auth"
+import { successResponse, unauthorized, withErrorHandler } from "@/lib/api-response"
+import { authenticateApiRequest } from "@/lib/auth-api-key"
+import { createExchangeTransaction } from "@/services/transactions/create-exchange"
+import { z } from "zod"
 
 const createExchangeSchema = z.object({
     type: z.enum(["fiat_to_crypto", "crypto_to_fiat"]),
@@ -19,9 +20,11 @@ const createExchangeSchema = z.object({
 })
 
 export const POST = withErrorHandler(async (req) => {
+    const authResult = await authenticateApiRequest(req)
+
     // 1. Authentication Check
     const session = await auth()
-    if (!session || !session.user) {
+    if (!session || !session.user || !authResult.authorized) {
         return unauthorized("You must be logged in to create a transaction")
     }
 

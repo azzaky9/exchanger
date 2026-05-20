@@ -1,16 +1,15 @@
 "use client"
 
+import {
+  Cancel01Icon,
+  CloudUploadIcon,
+  Loading03Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
 import { useCallback, useRef, useState } from "react"
 import { toast } from "sonner"
-import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  CloudUploadIcon,
-  Cancel01Icon,
-  Loading03Icon,
-} from "@hugeicons/core-free-icons"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 
 interface UploadedFile {
   file: File
@@ -53,6 +53,7 @@ interface UploadInvoiceModalProps {
   /** Transaction ID for contextual display. */
   transactionId?: string
   /** Controlled open state (optional). */
+  orderId?: string
   open?: boolean
   /** Controlled open change handler (optional). */
   onOpenChange?: (open: boolean) => void
@@ -62,6 +63,7 @@ export function UploadInvoiceModal({
   children,
   onUpload,
   transactionId,
+  orderId,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: UploadInvoiceModalProps) {
@@ -182,7 +184,7 @@ export function UploadInvoiceModal({
         formData.append("transactionId", transactionId)
         formData.append("file", files[i].file)
 
-        const res = await fetch("/api/transactions/proof/upload-invoice", {
+        const res = await fetch(`/api/transactions/upload-invoice/${orderId}`, {
           method: "POST",
           body: formData,
         })
@@ -226,7 +228,7 @@ export function UploadInvoiceModal({
     }
 
     setIsSubmitting(false)
-  }, [files, transactionId, onUpload, resetState])
+  }, [files, transactionId, onUpload, resetState, orderId])
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
