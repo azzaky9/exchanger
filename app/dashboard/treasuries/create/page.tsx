@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/prisma"
 import { CreateTreasuryForm } from "./create-form"
 
+export const dynamic = "force-dynamic"
+
 export default async function CreateTreasuryPage() {
-  const networks = await prisma.networks.findMany({
+  let networks = await prisma.networks.findMany({
     where: { is_active: true }
   })
+
+  if (networks.length === 0) {
+    networks = await prisma.networks.findMany()
+  }
 
   // Serialize Prisma Decimal objects to primitive types before passing to Client Component
   const serializedNetworks = networks.map(n => ({
