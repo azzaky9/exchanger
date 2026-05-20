@@ -1,4 +1,4 @@
-import type { NextAuthConfig } from "next-auth"
+import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
     pages: {
@@ -16,6 +16,7 @@ export const authConfig = {
                 '/api/transactions/settlement',
                 '/api/transactions/upload-invoice',
                 '/api/transactions/upload-tx',
+                '/api/transactions/create-exchange',
                 '/api/exchange-rates/current',
                 '/api/exchange-rates/reference-rate'
             ].some(route => nextUrl.pathname.startsWith(route));
